@@ -1,3 +1,7 @@
+// Initialize enhanced logger first (before any other imports)
+const logger = require('./src/lib/logger');
+logger.initialize();
+
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
