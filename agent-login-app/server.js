@@ -231,29 +231,25 @@ server.listen(PORT, '0.0.0.0', async () => {
     console.log('🎙️  Initializing Stream Server (for Ozonetel)...');
     console.log('=================================');
     
-    const streamServer = new StreamServer(server, null);
-    console.log('[StreamServer] Ready to receive events at: /ws');
+    // Always initialize StreamClient to handle incoming audio data
+    console.log('=================================');
+    console.log('🎤 Initializing Stream Client...');
+    console.log('=================================');
     
-    // Initialize WebSocket Stream Client for bi-directional audio (if connecting to external server)
-    if (process.env.STREAM_WS_URL) {
-        console.log('=================================');
-        console.log('🎤 Initializing Stream Client...');
-        console.log('=================================');
-        
-        streamClient = new StreamClient({
-            url: process.env.STREAM_WS_URL,
-            reconnectInterval: 5000,
-            logDir: path.join(__dirname, 'logs/stream')
-        });
-        
-        await streamClient.initialize();
-        console.log('[StreamClient] Stream client initialized');
-        
-        // Connect stream server to stream client
-        streamServer.streamClient = streamClient;
-    } else {
-        console.log('[Info] STREAM_WS_URL not set - Stream Server will receive events from Ozonetel');
-    }
+    streamClient = new StreamClient({
+        url: null, // Not connecting to external server, handling incoming connections
+        reconnectInterval: 5000,
+        logDir: path.join(__dirname, 'logs/stream')
+    });
+    
+    // Initialize (creates log directory, doesn't connect since url is null)
+    await streamClient.initialize();
+    console.log('[StreamClient] Stream client ready to process events');
+    
+    // Initialize StreamServer with StreamClient handler
+    const streamServer = new StreamServer(server, streamClient);
+    console.log('[StreamServer] Ready to receive events at: /ws');
+    console.log('[StreamServer] StreamClient connected for message processing');
     
     // Set stream client getter for routes
     streamModule.setStreamClientGetter(getStreamClient);

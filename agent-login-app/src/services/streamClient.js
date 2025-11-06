@@ -41,8 +41,13 @@ class StreamClient {
             console.error('[StreamClient] Failed to create log directory:', err);
         }
 
-        // Connect to WebSocket server
-        this.connect();
+        // Only connect if URL is provided (client mode)
+        // If no URL, this runs in server mode (just processes incoming messages)
+        if (this.config.url) {
+            this.connect();
+        } else {
+            console.log('[StreamClient] Running in server mode - ready to process incoming messages');
+        }
     }
 
     /**
