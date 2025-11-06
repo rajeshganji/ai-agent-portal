@@ -2,38 +2,58 @@ const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const WebSocket = require('ws');
+const helmet = require('helmet');
+const cors = require('cors');
+const securityConfig = require('./config/security');
+
 const app = express();
 const server = require('http').createServer(app);
 
-// WebSocket server setup
-const wss = new WebSocket.Server({ server });
+// WebSocket server setup with security
+const wss = new WebSocket.Server({ 
+    server,
+    verifyClient: (info, callback) => {
+        // Add WebSocket origin verification if needed
+        const origin = info.origin;
+        console.log('[WebSocket] Connection attempt from:', origin);
+        callback(true); // Accept all for now, add verification in production
+    }
+});
 const agentConnections = new Map();
 
-// Body parsing middleware - MUST come first
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Trust proxy - Important for Railway deployment
+app.set('trust proxy', 1);
 
-// Session configuration
-app.use(session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000
-    }
-}));
+// Security Headers - Apply helmet first
+app.use(securityConfig.helmetConfig);
 
-// Debug middleware
+// CORS - Apply before other middleware
+app.use(cors(securityConfig.corsConfig));
+
+// Body parsing middleware with size limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Session configuration with enhanced security
+app.use(session(securityConfig.sessionConfig));
+
+// Security logging middleware
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    if (req.body && Object.keys(req.body).length > 0) {
-        console.log('[Debug] Request body:', {
-            ...req.body,
-            password: req.body.password ? '***' : undefined
-        });
+    const logData = {
+        timestamp: new Date().toISOString(),
+        method: req.method,
+        url: req.url,
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+    };
+    
+    // Only log body for non-sensitive routes
+    if (req.body && Object.keys(req.body).length > 0 && !req.url.includes('/auth/')) {
+        console.log('[Request]', logData);
+    } else {
+        console.log(`[${logData.timestamp}] ${logData.method} ${logData.url} - IP: ${logData.ip}`);
     }
+    
     next();
 });
 
@@ -106,20 +126,22 @@ wss.on('connection', (ws, req) => {
     });
 });
 
-// Auth routes
+// Auth routes with strict rate limiting
 const authRoutes = require('./src/routes/auth');
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', securityConfig.rateLimiters.auth, authRoutes);
 
-// PBX routes
+// PBX routes with rate limiting
 const pbxModule = require('./src/routes/pbx');
 pbxModule.setAgentConnections(agentConnections);
+app.use('/api/pbx/ivrflow', securityConfig.rateLimiters.ivr);
+app.use('/api/pbx/receive-call-notification', securityConfig.rateLimiters.pbxWebhook);
 app.use('/api/pbx', pbxModule.router);
 
-// Monitor routes
+// Monitor routes with general rate limiting
 console.log('[Server] Setting up monitoring routes');
 const monitorModule = require('./src/routes/monitor.js');
 monitorModule.setAgentConnections(agentConnections);
-app.use('/api/monitor', monitorModule.router);
+app.use('/api/monitor', securityConfig.rateLimiters.general, monitorModule.router);
 
 // Main routes
 app.get('/', (req, res) => {
