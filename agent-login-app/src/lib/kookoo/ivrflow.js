@@ -48,18 +48,17 @@ class IVRFlow {
     handleWelcomeMenu() {
         this.response.addPlayText('Welcome to AI Agent Portal',3);
     
-            this.response.addDial("9985392390", {
-                  record: "true",
-                  timeout: "30000",
-                  moh: "default",
-            });
-    
+        // Initialize WebSocket streaming for AI processing
+        const wsUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+            ? `wss://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
+            : process.env.STREAM_WS_URL || 'wss://ai-agent-portal-production.up.railway.app/ws';
+            
+        this.response.addStream('9985392390', wsUrl, 'true');
         
-
-
-        const dtmf = new CollectDtmf(1, '#', 5000);
-        dtmf.addPlayText('For Sales, press 1. For Support, press 2. For Billing, press 3. For all other inquiries, press 0.',3 );
-        this.response.addCollectDtmf(dtmf);
+        // Alternative: Show menu for department selection
+        // const dtmf = new CollectDtmf(1, '#', 5000);
+        // dtmf.addPlayText('For Sales, press 1. For Support, press 2. For Billing, press 3. For all other inquiries, press 0.',3 );
+        // this.response.addCollectDtmf(dtmf);
     }
 
     /**
@@ -91,11 +90,13 @@ class IVRFlow {
         
         if (selection) {
             this.response.addPlayText(`You selected ${selection.department}. Please wait while we connect you.`);
-            this.response.addDial(selection.number, {
-                record: 'true',
-                timeout: '30000',
-                moh: 'default'
-            });
+            
+            // Use WebSocket streaming instead of direct dial
+            const wsUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+                ? `wss://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
+                : process.env.STREAM_WS_URL || 'wss://ai-agent-portal-production.up.railway.app/ws';
+                
+            this.response.addStream(selection.number, wsUrl, 'true');
         } else {
             this.response.addPlayText('Invalid selection. Please try again.');
             this.handleWelcomeMenu();
