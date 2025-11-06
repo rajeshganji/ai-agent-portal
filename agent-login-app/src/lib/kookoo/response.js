@@ -48,6 +48,9 @@ class Response {
         const playText = this.doc.createElement('playtext');
         playText.textContent = text;
         playText.setAttribute('lang', lang);
+        playText.setAttribute("type", "ggl");
+       // playText.setAttribute("lang", lang);
+     
         playText.setAttribute('speed', speed);
         playText.setAttribute('quality', quality);
         this.response.appendChild(playText);
