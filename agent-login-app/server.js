@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
-    secret: 'your-secret-key',
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -153,13 +153,19 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-server.listen(3000, () => {
-    console.log(`[Server] Running at http://localhost:3000`);
-    console.log(`[WebSocket] Server running at ws://localhost:3000`);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`[Server] Running at http://localhost:${PORT}`);
+    console.log(`[WebSocket] Server running at ws://localhost:${PORT}`);
     console.log('[Server] Available routes:');
     console.log('- GET  /');
     console.log('- GET  /toolbar');
     console.log('- POST /api/auth/login');
     console.log('- POST /api/auth/logout');
     console.log('- POST /api/pbx/call-notification');
+    console.log('- POST /api/pbx/receive-call-notification');
+    console.log('- GET  /api/pbx/ivrflow');
 });
+
+// Export for Vercel
+module.exports = app;

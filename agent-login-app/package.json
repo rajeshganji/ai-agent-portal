@@ -2,10 +2,11 @@
   "name": "agent-login-app",
   "version": "1.0.0",
   "description": "A Node.js application with Bootstrap for agent login and toolbar functionality.",
-  "main": "src/app.ts",
+  "main": "server.js",
   "scripts": {
-    "start": "ts-node src/app.ts",
-    "build": "tsc",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'Build complete'",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {

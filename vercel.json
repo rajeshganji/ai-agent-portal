@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "agent-login-app/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "agent-login-app/server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
