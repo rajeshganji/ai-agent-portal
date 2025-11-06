@@ -4,8 +4,9 @@
 
 ```
 Ozonetel PBX
-    ↓ (WebSocket Connection)
-    ↓ wss://ai-agent-portal-production.up.railway.app/ws
+    ↓ (WebSocket Connection - ws:// or wss://)
+    ↓ Production: wss://ai-agent-portal-production.up.railway.app/ws
+    ↓ Local Dev:  ws://localhost:3000/ws
     ↓
 [StreamServer] (src/services/streamServer.js)
     ↓ (Receives JSON data)
@@ -21,6 +22,23 @@ Ozonetel PBX
     └─► handleStopEvent()   → logs/stream/stream_events_*.jsonl
 ```
 
+## ✅ Protocol Support
+
+**The server automatically supports BOTH protocols**:
+- **ws://** - Unencrypted WebSocket (HTTP-based) - for local development
+- **wss://** - Encrypted WebSocket (HTTPS-based) - for production
+
+**Which protocol to use?**:
+- **Railway (Production)**: Use `wss://ai-agent-portal-production.up.railway.app/ws`
+- **Local Development**: Use `ws://localhost:3000/ws`
+- **Ozonetel can try both** - the server will accept either protocol
+
+**In logs, you'll see which protocol was used**:
+```
+[StreamServer] New connection from: 203.0.113.10 (wss://)  ← Secure connection
+[StreamServer] New connection from: 192.168.1.100 (ws://)  ← Unencrypted connection
+```
+
 ---
 
 ## 📁 Files That Read Ozonetel Data
@@ -30,14 +48,15 @@ Ozonetel PBX
 
 **Key Methods**:
 - **Line 23**: `handleConnection()` - Accepts connection from Ozonetel
-- **Line 32**: `console.log('[StreamServer] New connection from:', clientIp)` ← **CHECK THIS LOG**
-- **Line 40**: `ws.on('message', (data) => this.handleMessage(ws, data, connectionId))` ← **RECEIVES DATA**
-- **Line 59**: `handleMessage()` - Parses JSON and forwards to StreamClient
+- **Line 34**: `console.log('[StreamServer] New connection from:', clientIp)` ← **CHECK THIS LOG**
+- **Line 42**: `ws.on('message', (data) => this.handleMessage(ws, data, connectionId))` ← **RECEIVES DATA**
+- **Line 61**: `handleMessage()` - Parses JSON and forwards to StreamClient
 
 **What to look for in logs**:
 ```
-[StreamServer] Connection attempt from: [Ozonetel IP]
-[StreamServer] New connection from: [IP address]
+[StreamServer] Connection attempt from: [Ozonetel Origin] (wss://)
+[StreamServer] New connection from: [IP address] (wss://)
+[StreamServer] Connection ID: conn_1234567890_abc123
 [StreamServer] Received: start
 [StreamServer] Received: media
 ```
@@ -168,16 +187,30 @@ curl -I https://ai-agent-portal-production.up.railway.app
 Railway Logs should show:
 ```
 [StreamServer] WebSocket stream server ready at path: /ws
+[StreamServer] Supports both ws:// (HTTP) and wss:// (HTTPS) connections
 [StreamServer] Ready to receive events at: /ws
 ```
 
-### **3. Test WebSocket Connection Locally**
-```bash
-# Install wscat if needed
-npm install -g wscat
+### **3. Test WebSocket Connection**
 
-# Test connection
+**Using wscat (install with: `npm install -g wscat`)**:
+
+```bash
+# Test with wss:// (secure - recommended for production)
 wscat -c wss://ai-agent-portal-production.up.railway.app/ws
+
+# Test with ws:// (if Ozonetel tries unencrypted)
+wscat -c ws://ai-agent-portal-production.up.railway.app/ws
+
+# For local development
+wscat -c ws://localhost:3000/ws
+```
+
+Expected log output when connection succeeds:
+```
+[StreamServer] Connection attempt from: [origin] (wss://)
+[StreamServer] New connection from: [IP] (wss://)
+[StreamServer] Connection ID: conn_1234567890_abc123
 ```
 
 Expected response:

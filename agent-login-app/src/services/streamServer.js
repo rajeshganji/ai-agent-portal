@@ -11,11 +11,14 @@ class StreamServer {
         this.connections = new Map();
         
         // Create WebSocket server on /ws path
+        // Automatically supports both ws:// and wss:// based on the underlying server
         this.wss = new WebSocket.Server({ 
             server,
             path: '/ws',
             verifyClient: (info, callback) => {
-                console.log('[StreamServer] Connection attempt from:', info.origin);
+                const protocol = info.secure ? 'wss' : 'ws';
+                console.log(`[StreamServer] Connection attempt from: ${info.origin} (${protocol}://)`);
+                console.log(`[StreamServer] Request URL: ${info.req.url}`);
                 // TODO: Add authentication/verification for Ozonetel
                 callback(true);
             }
@@ -26,15 +29,18 @@ class StreamServer {
         });
 
         console.log('[StreamServer] WebSocket stream server ready at path: /ws');
+        console.log('[StreamServer] Supports both ws:// (HTTP) and wss:// (HTTPS) connections');
     }
 
     handleConnection(ws, req) {
         const clientIp = req.socket.remoteAddress;
-        console.log('[StreamServer] New connection from:', clientIp);
+        const protocol = req.connection.encrypted ? 'wss' : 'ws';
+        console.log(`[StreamServer] New connection from: ${clientIp} (${protocol}://)`);
 
         // Generate connection ID
         const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.connections.set(connectionId, ws);
+        console.log(`[StreamServer] Connection ID: ${connectionId}`);
 
         ws.on('message', (data) => {
             this.handleMessage(ws, data, connectionId);
