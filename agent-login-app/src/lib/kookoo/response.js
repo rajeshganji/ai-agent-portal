@@ -171,6 +171,14 @@ class Response {
         this.response.appendChild(recognize);
     }
 
+    addStream(streamNumber, wsurl, record = 'false') {
+        const stream = this.doc.createElement('stream');
+        stream.textContent = streamNumber;
+        stream.setAttribute('wsurl', wsurl);
+        stream.setAttribute('record', record);
+        this.response.appendChild(stream);
+    }
+
     getXML() {
         const serializer = new XMLSerializer();
         return serializer.serializeToString(this.doc);
