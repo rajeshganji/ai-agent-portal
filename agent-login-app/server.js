@@ -19,13 +19,14 @@ if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
 const app = express();
 const server = require('http').createServer(app);
 
-// WebSocket server setup with security
+// WebSocket server for agent connections (on /agent path)
 const wss = new WebSocket.Server({ 
     server,
+    path: '/agent',  // Separate path for agent connections
     verifyClient: (info, callback) => {
         // Add WebSocket origin verification if needed
         const origin = info.origin;
-        console.log('[WebSocket] Connection attempt from:', origin);
+        console.log('[WebSocket-Agent] Connection attempt from:', origin);
         callback(true); // Accept all for now, add verification in production
     }
 });
@@ -83,21 +84,21 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
-// WebSocket connection handling
+// WebSocket connection handling for agents
 wss.on('connection', (ws, req) => {
-    console.log('[WebSocket] New connection attempt');
+    console.log('[WebSocket-Agent] New agent connection');
     
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message.toString());
-            console.log('[WebSocket] Received message:', data);
+            console.log('[WebSocket-Agent] Received message:', data);
             
             if (data.type === 'register') {
                 const agentId = data.agentId;
-                console.log(`[WebSocket] Registering agent ${agentId}`);
+                console.log(`[WebSocket-Agent] Registering agent ${agentId}`);
                 
                 if (!agentId) {
-                    console.error('[WebSocket] No agentId provided in registration');
+                    console.error('[WebSocket-Agent] No agentId provided in registration');
                     ws.send(JSON.stringify({
                         type: 'error',
                         message: 'No agentId provided'
@@ -106,8 +107,8 @@ wss.on('connection', (ws, req) => {
                 }
 
                 agentConnections.set(agentId, ws);
-                console.log(`[WebSocket] Agent ${agentId} successfully registered`);
-                console.log('[WebSocket] Current connections:', Array.from(agentConnections.keys()));
+                console.log(`[WebSocket-Agent] Agent ${agentId} successfully registered`);
+                console.log('[WebSocket-Agent] Current connections:', Array.from(agentConnections.keys()));
                 
                 ws.send(JSON.stringify({
                     type: 'registration_success',
@@ -116,7 +117,7 @@ wss.on('connection', (ws, req) => {
                 }));
             }
         } catch (err) {
-            console.error('[WebSocket] Error processing message:', err);
+            console.error('[WebSocket-Agent] Error processing message:', err);
             ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Failed to process message'
@@ -129,7 +130,7 @@ wss.on('connection', (ws, req) => {
         for (const [agentId, connection] of agentConnections.entries()) {
             if (connection === ws) {
                 agentConnections.delete(agentId);
-                console.log(`[WebSocket] Agent ${agentId} disconnected`);
+                console.log(`[WebSocket-Agent] Agent ${agentId} disconnected`);
                 break;
             }
         }
@@ -207,7 +208,8 @@ const getStreamClient = () => streamClient;
 
 server.listen(PORT, '0.0.0.0', async () => {
     console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
-    console.log(`✅ [WebSocket] Server running at ws://0.0.0.0:${PORT}`);
+    console.log(`✅ [WebSocket-Agent] Agent connections at ws://0.0.0.0:${PORT}/agent`);
+    console.log(`✅ [WebSocket-Stream] Ozonetel streaming at ws://0.0.0.0:${PORT}/ws`);
     console.log('[Server] Available routes:');
     console.log('- GET  /');
     console.log('- GET  /toolbar');
@@ -226,7 +228,7 @@ server.listen(PORT, '0.0.0.0', async () => {
     console.log('=================================');
     
     const streamServer = new StreamServer(server, null);
-    console.log('[StreamServer] Ready to receive events at: wss://your-domain/ws');
+    console.log('[StreamServer] Ready to receive events at: /ws');
     
     // Initialize WebSocket Stream Client for bi-directional audio (if connecting to external server)
     if (process.env.STREAM_WS_URL) {

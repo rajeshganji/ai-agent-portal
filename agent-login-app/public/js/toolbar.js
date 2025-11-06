@@ -145,9 +145,9 @@ $(document).ready(function() {
         audio.play().catch(err => console.log('[Audio] Could not play notification sound'));
     }
 
-    // Initialize WebSocket
+    // Initialize WebSocket for agent connections
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}`;
+    const wsUrl = `${protocol}//${window.location.host}/agent`;
     console.log(`[WebSocket] Connecting to ${wsUrl}`);
 
     const ws = new WebSocket(wsUrl);
