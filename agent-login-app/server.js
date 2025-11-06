@@ -6,6 +6,14 @@ const helmet = require('helmet');
 const cors = require('cors');
 const securityConfig = require('./config/security');
 
+// Validate critical environment variables
+if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
+    console.error('❌ ERROR: SESSION_SECRET environment variable is not set!');
+    console.error('Please set SESSION_SECRET in Railway dashboard.');
+    console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+    process.exit(1);
+}
+
 const app = express();
 const server = require('http').createServer(app);
 
@@ -176,9 +184,18 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`[Server] Running at http://localhost:${PORT}`);
-    console.log(`[WebSocket] Server running at ws://localhost:${PORT}`);
+
+console.log('=================================');
+console.log('🚀 Starting AI Agent Portal');
+console.log('=================================');
+console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('Port:', PORT);
+console.log('Session Secret:', process.env.SESSION_SECRET ? '✓ Set' : '✗ Not Set');
+console.log('=================================');
+
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
+    console.log(`✅ [WebSocket] Server running at ws://0.0.0.0:${PORT}`);
     console.log('[Server] Available routes:');
     console.log('- GET  /');
     console.log('- GET  /toolbar');
@@ -187,6 +204,34 @@ server.listen(PORT, () => {
     console.log('- POST /api/pbx/call-notification');
     console.log('- POST /api/pbx/receive-call-notification');
     console.log('- GET  /api/pbx/ivrflow');
+    console.log('=================================');
+    console.log('🎉 Server is ready!');
+    console.log('=================================');
+});
+
+// Handle server errors
+server.on('error', (error) => {
+    console.error('❌ Server error:', error);
+    if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use`);
+    }
+    process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+    console.log('📛 SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+        console.log('✅ HTTP server closed');
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('📛 SIGINT signal received: closing HTTP server');
+    server.close(() => {
+        console.log('✅ HTTP server closed');
+        process.exit(0);
+    });
 });
 
 // Export for Vercel
