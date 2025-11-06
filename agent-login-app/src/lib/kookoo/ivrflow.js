@@ -53,7 +53,7 @@ class IVRFlow {
             ? `wss://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
             : process.env.STREAM_WS_URL || 'wss://ai-agent-portal-production.up.railway.app/ws';
             
-        this.response.addStream('9985392390', wsUrl, 'true');
+        this.response.addStream("520228", wsUrl, "true");
         
         // Alternative: Show menu for department selection
         // const dtmf = new CollectDtmf(1, '#', 5000);

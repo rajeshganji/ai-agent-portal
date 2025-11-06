@@ -174,7 +174,8 @@ class Response {
     addStream(streamNumber, wsurl, record = 'false') {
         const stream = this.doc.createElement('stream');
         stream.textContent = streamNumber;
-        stream.setAttribute('wsurl', wsurl);
+        stream.setAttribute("is_sip", "true");
+        stream.setAttribute("url", wsurl);
         stream.setAttribute('record', record);
         this.response.appendChild(stream);
     }
