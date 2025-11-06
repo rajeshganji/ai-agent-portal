@@ -5,6 +5,7 @@ const WebSocket = require('ws');
 const helmet = require('helmet');
 const cors = require('cors');
 const securityConfig = require('./config/security');
+const StreamClient = require('./src/services/streamClient');
 
 // Validate critical environment variables
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
@@ -151,6 +152,10 @@ const monitorModule = require('./src/routes/monitor.js');
 monitorModule.setAgentConnections(agentConnections);
 app.use('/api/monitor', securityConfig.rateLimiters.general, monitorModule.router);
 
+console.log('[Server] Setting up stream routes');
+const streamModule = require('./src/routes/stream.js');
+app.use('/api/stream', securityConfig.rateLimiters.general, streamModule.router);
+
 // Main routes
 app.get('/', (req, res) => {
     res.render('login', { error: null });
@@ -193,7 +198,13 @@ console.log('Port:', PORT);
 console.log('Session Secret:', process.env.SESSION_SECRET ? '✓ Set' : '✗ Not Set');
 console.log('=================================');
 
-server.listen(PORT, '0.0.0.0', () => {
+// Initialize Stream Client
+let streamClient = null;
+
+// Export streamClient getter for routes
+const getStreamClient = () => streamClient;
+
+server.listen(PORT, '0.0.0.0', async () => {
     console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
     console.log(`✅ [WebSocket] Server running at ws://0.0.0.0:${PORT}`);
     console.log('[Server] Available routes:');
@@ -207,6 +218,23 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('=================================');
     console.log('🎉 Server is ready!');
     console.log('=================================');
+    
+    // Initialize WebSocket Stream Client for bi-directional audio
+    console.log('=================================');
+    console.log('🎤 Initializing Stream Client...');
+    console.log('=================================');
+    
+    streamClient = new StreamClient({
+        url: process.env.STREAM_WS_URL || 'ws://localhost:8080/ws',
+        reconnectInterval: 5000,
+        logDir: path.join(__dirname, 'logs/stream')
+    });
+    
+    await streamClient.initialize();
+    console.log('[StreamClient] Stream client initialized');
+    
+    // Set stream client getter for routes
+    streamModule.setStreamClientGetter(getStreamClient);
 });
 
 // Handle server errors
@@ -221,6 +249,10 @@ server.on('error', (error) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('📛 SIGTERM signal received: closing HTTP server');
+    if (streamClient) {
+        console.log('[StreamClient] Disconnecting stream client...');
+        streamClient.disconnect();
+    }
     server.close(() => {
         console.log('✅ HTTP server closed');
     });
@@ -228,6 +260,10 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
     console.log('📛 SIGINT signal received: closing HTTP server');
+    if (streamClient) {
+        console.log('[StreamClient] Disconnecting stream client...');
+        streamClient.disconnect();
+    }
     server.close(() => {
         console.log('✅ HTTP server closed');
         process.exit(0);
