@@ -28,17 +28,8 @@ class StreamServer {
                 console.log(`[StreamServer] User-Agent: ${info.req.headers['user-agent'] || 'NOT PROVIDED'}`);
                 console.log(`[StreamServer] All Headers:`, JSON.stringify(info.req.headers, null, 2));
                 
-                // You can add validation logic here
+                // Accept all connections - path is already filtered by WebSocket.Server
                 try {
-                    // Example: Check if path is correct
-                    if (info.req.url !== '/ws') {
-                        console.log(`[StreamServer] ❌ REJECTING - Invalid path: ${info.req.url}`);
-                        callback(false, 404, 'Not Found');
-                        console.log('======================================================\n');
-                        return;
-                    }
-                    
-                    // Accept all connections - Ozonetel verified
                     console.log('[StreamServer] ✅ ACCEPTING CONNECTION - All checks passed');
                     console.log('[StreamServer] Calling callback(true) to accept connection...');
                     console.log('======================================================\n');
