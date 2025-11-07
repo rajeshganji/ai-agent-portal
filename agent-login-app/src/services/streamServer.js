@@ -17,9 +17,16 @@ class StreamServer {
             path: '/ws',
             verifyClient: (info, callback) => {
                 const protocol = info.secure ? 'wss' : 'ws';
-                console.log(`[StreamServer] Connection attempt from: ${info.origin} (${protocol}://)`);
-                console.log(`[StreamServer] Request URL: ${info.req.url}`);
-                // TODO: Add authentication/verification for Ozonetel
+                console.log('\n========== NEW WEBSOCKET CONNECTION ATTEMPT ==========');
+                console.log(`[StreamServer] Protocol: ${protocol}://`);
+                console.log(`[StreamServer] Origin: ${info.origin || 'NOT PROVIDED'}`);
+                console.log(`[StreamServer] URL: ${info.req.url}`);
+                console.log(`[StreamServer] Remote Address: ${info.req.socket.remoteAddress}`);
+                console.log(`[StreamServer] Remote Port: ${info.req.socket.remotePort}`);
+                console.log(`[StreamServer] User-Agent: ${info.req.headers['user-agent'] || 'NOT PROVIDED'}`);
+                console.log(`[StreamServer] All Headers:`, JSON.stringify(info.req.headers, null, 2));
+                console.log('======================================================\n');
+                // Accept all connections - Ozonetel verified
                 callback(true);
             }
         });
@@ -35,13 +42,24 @@ class StreamServer {
     handleConnection(ws, req) {
         const clientIp = req.socket.remoteAddress;
         const protocol = req.connection.encrypted ? 'wss' : 'ws';
-        console.log(`[StreamServer] New connection from: ${clientIp} (${protocol}://)`);
+        
+        console.log('\n========== WEBSOCKET CONNECTION ESTABLISHED ==========');
+        console.log(`[StreamServer] Protocol: ${protocol}://`);
+        console.log(`[StreamServer] Client IP: ${clientIp}`);
+        console.log(`[StreamServer] Client Port: ${req.socket.remotePort}`);
+        console.log(`[StreamServer] Request Method: ${req.method}`);
+        console.log(`[StreamServer] Request URL: ${req.url}`);
+        console.log(`[StreamServer] HTTP Version: ${req.httpVersion}`);
+        console.log(`[StreamServer] User-Agent: ${req.headers['user-agent'] || 'NOT PROVIDED'}`);
+        console.log(`[StreamServer] Connection headers:`, JSON.stringify(req.headers, null, 2));
 
         // Generate connection ID
         const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.connections.set(connectionId, ws);
         console.log(`[StreamServer] Connection ID: ${connectionId}`);
         console.log(`[StreamServer] Total active connections: ${this.connections.size}`);
+        console.log('[StreamServer] WebSocket ready state:', ws.readyState);
+        console.log('=====================================================\n');
 
         ws.on('message', (data) => {
             console.log(`[StreamServer] ⚡ Message received on connection ${connectionId}`);
@@ -50,13 +68,19 @@ class StreamServer {
         });
 
         ws.on('close', () => {
-            console.log('[StreamServer] 🔌 Connection closed:', connectionId);
+            console.log('\n========== WEBSOCKET CONNECTION CLOSED ==========');
+            console.log('[StreamServer] Connection ID:', connectionId);
             console.log('[StreamServer] Remaining connections:', this.connections.size - 1);
+            console.log('================================================\n');
             this.connections.delete(connectionId);
         });
 
         ws.on('error', (error) => {
-            console.error('[StreamServer] ❌ WebSocket error on', connectionId, ':', error.message);
+            console.error('\n========== WEBSOCKET ERROR ==========');
+            console.error('[StreamServer] Connection ID:', connectionId);
+            console.error('[StreamServer] Error:', error.message);
+            console.error('[StreamServer] Error Stack:', error.stack);
+            console.error('====================================\n');
         });
 
         ws.on('ping', () => {
@@ -68,11 +92,18 @@ class StreamServer {
         });
 
         // Send acknowledgment
-        ws.send(JSON.stringify({
-            type: 'connected',
-            connectionId,
-            timestamp: new Date().toISOString()
-        }));
+        console.log(`[StreamServer] Sending connection acknowledgment to ${connectionId}`);
+        try {
+            ws.send(JSON.stringify({
+                type: 'connected',
+                connectionId,
+                timestamp: new Date().toISOString(),
+                message: 'Connected to AI Agent Portal WebSocket Server'
+            }));
+            console.log(`[StreamServer] ✅ Acknowledgment sent successfully to ${connectionId}`);
+        } catch (error) {
+            console.error(`[StreamServer] ❌ Failed to send acknowledgment to ${connectionId}:`, error.message);
+        }
     }
 
     handleMessage(ws, data, connectionId) {
