@@ -175,60 +175,35 @@ class StreamServer {
 
     handleMessage(ws, data, connectionId) {
         try {
-            console.log('\n========== MESSAGE RECEIVED ==========');
-            console.log(`[StreamServer] Connection ID: ${connectionId}`);
-            console.log(`[StreamServer] Data type: ${typeof data}`);
-            console.log(`[StreamServer] Data size: ${data.length} bytes`);
-            console.log(`[StreamServer] Raw data (first 500 chars):`, data.toString().substring(0, 500));
-            
             const message = JSON.parse(data.toString());
-            console.log('[StreamServer] ✅ JSON parsed successfully');
             
-            // Log Ozonetel-specific fields
-            if (message.event) {
-                console.log(`[StreamServer] 📡 Event: ${message.event}`);
-            }
-            if (message.type) {
-                console.log(`[StreamServer] 📋 Type: ${message.type}`);
-            }
-            if (message.ucid) {
-                console.log(`[StreamServer] 🔑 UCID: ${message.ucid}`);
-            }
-            
-            // Log audio data info if present
-            if (message.event === 'media' || message.type === 'media') {
-                console.log('[StreamServer] 🎵 AUDIO DATA RECEIVED');
-                if (message.data) {
-                    console.log(`[StreamServer] Sample Rate: ${message.data.sampleRate}`);
-                    console.log(`[StreamServer] Bits Per Sample: ${message.data.bitsPerSample}`);
-                    console.log(`[StreamServer] Channel Count: ${message.data.channelCount}`);
-                    console.log(`[StreamServer] Number of Frames: ${message.data.numberOfFrames}`);
-                    console.log(`[StreamServer] Samples count: ${message.data.samples?.length || 0}`);
-                    console.log(`[StreamServer] First 10 samples:`, message.data.samples?.slice(0, 10));
+            // Compact logging - only log important events
+            if (message.event === 'start' || message.event === 'stop') {
+                console.log(`[StreamServer] � ${message.event.toUpperCase()} - UCID: ${message.ucid}`);
+            } else if (message.event === 'media') {
+                // Only log every 100th media packet to reduce noise
+                if (!this._mediaPacketCount) this._mediaPacketCount = {};
+                if (!this._mediaPacketCount[message.ucid]) this._mediaPacketCount[message.ucid] = 0;
+                this._mediaPacketCount[message.ucid]++;
+                
+                if (this._mediaPacketCount[message.ucid] % 100 === 0) {
+                    console.log(`[StreamServer] 🎵 MEDIA packet #${this._mediaPacketCount[message.ucid]} - UCID: ${message.ucid}, frames: ${message.data?.numberOfFrames}, rate: ${message.data?.sampleRate}Hz`);
                 }
+            } else {
+                // Log other events compactly
+                console.log(`[StreamServer] Event: ${message.event || message.type}, UCID: ${message.ucid}`);
             }
-            
-            console.log('[StreamServer] Full message structure:', JSON.stringify(message, null, 2).substring(0, 1000));
-            console.log('=====================================\n');
 
             // Forward to StreamClient message handler
             if (this.streamClient) {
-                console.log('[StreamServer] Forwarding to StreamClient...');
                 this.streamClient.handleMessage(data);
             } else {
                 console.warn('[StreamServer] ⚠️ No StreamClient available to handle message!');
             }
 
-            // Handle commands from client
-            if (message.command) {
-                console.log('[StreamServer] Command received:', message.command);
-                // Commands are handled by StreamClient
-            }
-
         } catch (err) {
             console.error('[StreamServer] ❌ Error processing message:', err.message);
-            console.error('[StreamServer] Raw data that failed:', data.toString().substring(0, 500));
-            console.error('[StreamServer] Error stack:', err.stack);
+            console.error('[StreamServer] Raw data (first 200 chars):', data.toString().substring(0, 200));
         }
     }
 

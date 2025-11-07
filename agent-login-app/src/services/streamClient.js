@@ -236,7 +236,7 @@ class StreamClient {
                 }
             }
 
-            // Log every 100th packet
+            // Log every 100th packet (compact, no sample data)
             if (this.currentCall.mediaPackets % 100 === 0) {
                 await this.logEvent('media', {
                     ucid,
@@ -244,8 +244,8 @@ class StreamClient {
                     sampleRate,
                     numberOfFrames,
                     channelCount,
-                    samplesCount: samples.length,
-                    samplePreview: samples.slice(0, 10) // First 10 samples
+                    samplesCount: samples.length
+                    // Removed: samplePreview (too verbose)
                 });
             }
         }
@@ -583,7 +583,7 @@ class StreamClient {
     }
 
     /**
-     * Save audio buffer to file
+     * Save audio buffer to file (compact format, no sample data)
      */
     async saveAudioBuffer(ucid) {
         try {
@@ -596,16 +596,22 @@ class StreamClient {
             const filename = `audio_${ucid}_${Date.now()}.json`;
             const filepath = path.join(this.config.logDir, filename);
 
+            // Save only metadata, not the actual samples (too large)
             const audioData = {
                 ucid,
                 timestamp: new Date().toISOString(),
                 totalPackets: buffer.length,
-                packets: buffer
+                summary: buffer.map(p => ({
+                    timestamp: p.timestamp,
+                    sampleRate: p.sampleRate,
+                    samplesCount: p.samples?.length || 0,
+                    numberOfFrames: p.numberOfFrames
+                    // Removed: samples array (too large)
+                }))
             };
 
-            await fs.writeFile(filepath, JSON.stringify(audioData, null, 2));
-            console.log('[StreamClient] 💾 Saved audio buffer:', filename);
-            console.log('[StreamClient] Total packets:', buffer.length);
+            await fs.writeFile(filepath, JSON.stringify(audioData)); // Compact JSON, no pretty-print
+            console.log('[StreamClient] 💾 Saved audio metadata:', filename, `(${buffer.length} packets)`);
         } catch (err) {
             console.error('[StreamClient] Error saving audio buffer:', err);
         }
