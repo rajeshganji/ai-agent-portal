@@ -86,11 +86,20 @@ module.exports = {
       
       const allowedOrigins = process.env.ALLOWED_ORIGINS 
         ? process.env.ALLOWED_ORIGINS.split(',')
-        : ['http://localhost:3000', 'http://localhost:8080'];
+        : [
+            'http://localhost:3000', 
+            'http://localhost:8080',
+            'http://localhost:5173',
+            'https://ai-agent-portal-production.up.railway.app'
+          ];
       
-      if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      // In production, also allow Railway domain
+      if (allowedOrigins.indexOf(origin) !== -1 || 
+          process.env.NODE_ENV === 'development' ||
+          origin?.includes('railway.app')) {
         callback(null, true);
       } else {
+        console.log('[CORS] Blocked origin:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },
