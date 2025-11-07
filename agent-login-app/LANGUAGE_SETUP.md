@@ -1,40 +1,68 @@
 # Language Configuration for Transcription
 
+## Important: Whisper Language Support
+
+**OpenAI Whisper has LIMITED language code support.**
+
+For **Indian languages** (Telugu, Tamil, Kannada, Malayalam):
+- ✅ **Use `'en'`** - Whisper will auto-detect and transcribe correctly
+- ❌ **Don't use** `'te'`, `'ta'`, `'kn'`, `'ml'` - These will cause `400 Language not supported` errors
+
+**Why?** Whisper detects Indian languages automatically but doesn't accept their ISO codes.
+
 ## Problem
-When using `auto` language detection, OpenAI Whisper may detect the correct language but output text in the wrong Unicode script. For example:
-- Detects "Telugu" but outputs Malayalam/Tamil script
-- Detects "Hindi" but outputs incorrect Unicode
+When using `'te'` or other Indian language codes, you get:
+```
+400 Language 'te' is not supported
+```
 
 ## Solution
-Explicitly set the language for each call instead of using auto-detection.
+Use `'en'` or `'auto'` - Whisper will:
+1. Auto-detect the actual language (Telugu, Tamil, etc.)
+2. Output correct Unicode script
+3. Set `detectedLanguage` in response
 
 ## Default Language
 
 Set via environment variable:
 ```bash
-DEFAULT_TRANSCRIPTION_LANGUAGE=te  # Telugu (default)
+DEFAULT_TRANSCRIPTION_LANGUAGE=en  # Recommended for Indian languages
 # or
-DEFAULT_TRANSCRIPTION_LANGUAGE=hi  # Hindi
-DEFAULT_TRANSCRIPTION_LANGUAGE=ta  # Tamil
-DEFAULT_TRANSCRIPTION_LANGUAGE=en  # English
+DEFAULT_TRANSCRIPTION_LANGUAGE=auto  # Let Whisper decide
 ```
 
 Add to Railway environment variables:
 ```
-DEFAULT_TRANSCRIPTION_LANGUAGE=te
+DEFAULT_TRANSCRIPTION_LANGUAGE=en
 ```
 
 ## Supported Languages
 
-| Code | Language | Script |
-|------|----------|--------|
-| `en` | English | Latin |
-| `hi` | Hindi | Devanagari |
-| `te` | Telugu | Telugu |
-| `ta` | Tamil | Tamil |
-| `kn` | Kannada | Kannada |
-| `ml` | Malayalam | Malayalam |
-| `auto` | Auto-detect | ⚠️ May use wrong script |
+### ✅ Whisper Directly Supports
+
+| Code | Language | Use For |
+|------|----------|---------|
+| `en` | English | English + Indian languages (auto-detected) |
+| `hi` | Hindi | Hindi (but 'en' also works) |
+| `es` | Spanish | Spanish |
+| `fr` | French | French |
+| `de` | German | German |
+| `it` | Italian | Italian |
+| `pt` | Portuguese | Portuguese |
+| `ru` | Russian | Russian |
+| `ja` | Japanese | Japanese |
+| `ko` | Korean | Korean |
+| `zh` | Chinese | Chinese |
+| `auto` | Auto-detect | Any language |
+
+### ⚠️ NOT Directly Supported (Use 'en' or 'auto')
+
+| Code | Language | What to Use Instead |
+|------|----------|---------------------|
+| `te` | Telugu | Use `'en'` - auto-detects Telugu |
+| `ta` | Tamil | Use `'en'` - auto-detects Tamil |
+| `kn` | Kannada | Use `'en'` - auto-detects Kannada |
+| `ml` | Malayalam | Use `'en'` - auto-detects Malayalam |
 
 ## API Usage
 
@@ -46,7 +74,15 @@ DEFAULT_TRANSCRIPTION_LANGUAGE=te
 ```json
 {
   "ucid": "CALL_ID_12345",
-  "language": "te"
+  "language": "en"
+}
+```
+
+**For Indian Languages (Telugu, Tamil, etc.):**
+```json
+{
+  "ucid": "CALL_ID_12345",
+  "language": "en"  // Whisper will auto-detect Telugu/Tamil/etc
 }
 ```
 
@@ -54,9 +90,9 @@ DEFAULT_TRANSCRIPTION_LANGUAGE=te
 ```json
 {
   "success": true,
-  "message": "Language set to 'te' for UCID: CALL_ID_12345",
+  "message": "Language set to 'en' for UCID: CALL_ID_12345",
   "ucid": "CALL_ID_12345",
-  "language": "te"
+  "language": "en"
 }
 ```
 
@@ -64,7 +100,7 @@ DEFAULT_TRANSCRIPTION_LANGUAGE=te
 ```json
 {
   "success": false,
-  "error": "Invalid language code. Valid options: en, hi, te, ta, kn, ml, auto"
+  "error": "Invalid language code. Valid options: en, hi, es, fr, de, it, pt, ru, ja, ko, zh, auto"
 }
 ```
 

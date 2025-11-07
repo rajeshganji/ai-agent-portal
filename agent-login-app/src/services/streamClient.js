@@ -174,8 +174,9 @@ class StreamClient {
                 silenceAmplitude: 200     // Higher threshold (was 100)
             }));
             
-            // Create transcription session with default language from env or 'auto'
-            const defaultLanguage = process.env.DEFAULT_TRANSCRIPTION_LANGUAGE || 'te'; // Default to Telugu
+            // Create transcription session with default language from env or 'en' (Indian English)
+            // Note: Use 'en' for Indian languages - Whisper auto-detects Telugu/Tamil/Hindi/etc
+            const defaultLanguage = process.env.DEFAULT_TRANSCRIPTION_LANGUAGE || 'en';
             
             this.transcriptionSessions.set(ucid, {
                 startTime: Date.now(),

@@ -127,12 +127,13 @@ router.post('/set-language', (req, res) => {
         });
     }
 
-    // Validate language code
-    const validLanguages = ['en', 'hi', 'te', 'ta', 'kn', 'ml', 'auto'];
+    // Validate language code - use Whisper-supported languages
+    // Note: For Indian languages (Telugu, Tamil, etc), use 'en' - Whisper will auto-detect
+    const validLanguages = ['en', 'hi', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'auto'];
     if (!validLanguages.includes(language)) {
         return res.status(400).json({
             success: false,
-            error: `Invalid language code. Valid options: ${validLanguages.join(', ')}`
+            error: `Invalid language code. Valid options: ${validLanguages.join(', ')}. For Indian languages (Telugu, Tamil, etc), use 'en' - Whisper will auto-detect.`
         });
     }
 

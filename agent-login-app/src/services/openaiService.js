@@ -33,9 +33,21 @@ class OpenAIService {
 
         try {
             const startTime = Date.now();
+            
+            // Map unsupported Indian language codes to auto-detect
+            // Whisper supports: hi (Hindi), but not te, ta, kn, ml
+            const whisperSupportedLanguages = ['en', 'hi', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh'];
+            let whisperLanguage = language;
+            
+            if (language !== 'auto' && !whisperSupportedLanguages.includes(language)) {
+                console.log(`[OpenAI] Language '${language}' not directly supported by Whisper, using auto-detect`);
+                whisperLanguage = 'auto';
+            }
+            
             console.log('[OpenAI] Converting speech to text...', { 
                 bufferSize: audioBuffer.length,
-                language 
+                requestedLanguage: language,
+                whisperLanguage: whisperLanguage
             });
             
             // Create a blob from the buffer for FormData
@@ -47,7 +59,7 @@ class OpenAIService {
             const transcription = await this.client.audio.transcriptions.create({
                 file: file,
                 model: 'whisper-1',
-                language: language === 'auto' ? undefined : language,
+                language: whisperLanguage === 'auto' ? undefined : whisperLanguage,
                 response_format: 'verbose_json'
             });
             
