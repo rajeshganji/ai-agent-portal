@@ -408,12 +408,19 @@ class StreamClient {
 
             // Combine all transcription chunks (with safety checks)
             const chunks = session.chunks || [];
-            const finalText = chunks
-                .map(chunk => chunk.text?.trim() || '')
-                .filter(text => text.length > 0) // Remove empty
-                .join(' ')
-                .replace(/\s+/g, ' ') // Normalize spaces
-                .trim();
+            
+            // Deduplicate consecutive identical chunks
+            const deduplicatedChunks = [];
+            let lastText = null;
+            for (const chunk of chunks) {
+                const text = chunk.text?.trim() || '';
+                if (text.length > 0 && text !== lastText) {
+                    deduplicatedChunks.push(text);
+                    lastText = text;
+                }
+            }
+            
+            const finalText = deduplicatedChunks.join(' ').replace(/\s+/g, ' ').trim();
             
             const totalDuration = Date.now() - session.startTime;
             const totalAudioMs = chunks.reduce((sum, c) => sum + (c.durationMs || 0), 0);
@@ -425,6 +432,7 @@ class StreamClient {
             console.log('[StreamClient] UCID:', ucid);
             console.log('[StreamClient] Total Duration:', (totalDuration / 1000).toFixed(2), 'seconds');
             console.log('[StreamClient] Total Chunks:', session.totalChunks);
+            console.log('[StreamClient] Deduplicated Chunks:', deduplicatedChunks.length, '(removed', session.totalChunks - deduplicatedChunks.length, 'duplicates)');
             console.log('[StreamClient] Total Audio Processed:', totalAudioMs, 'ms');
             console.log('[StreamClient] Errors:', session.errors);
             console.log('[StreamClient] ──────────────────────────────────────────');
@@ -434,14 +442,11 @@ class StreamClient {
             console.log('[StreamClient]');
             console.log('[StreamClient] ──────────────────────────────────────────');
             
-            // Show unique phrases (deduplicated) - with safety checks
-            const uniquePhrases = [...new Set(chunks.map(c => c.text?.trim() || '').filter(t => t.length > 0))];
-            if (uniquePhrases.length > 0 && uniquePhrases.length < session.totalChunks) {
-                console.log('[StreamClient] Unique phrases detected (', uniquePhrases.length, 'distinct):');
-                uniquePhrases.forEach((phrase, index) => {
-                    if (phrase.length > 0) {
-                        console.log(`[StreamClient]   - "${phrase}"`);
-                    }
+            // Show individual chunks if there are multiple
+            if (deduplicatedChunks.length > 1) {
+                console.log('[StreamClient] Individual chunks (', deduplicatedChunks.length, '):');
+                deduplicatedChunks.forEach((phrase, index) => {
+                    console.log(`[StreamClient]   ${index + 1}. "${phrase}"`);
                 });
                 console.log('[StreamClient] ──────────────────────────────────────────');
             }
