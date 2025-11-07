@@ -28,6 +28,7 @@ Thumbs.db
 
 # Build outputs
 dist/
+!ivr-designer/dist/
 build/
 *.tsbuildinfo
 
