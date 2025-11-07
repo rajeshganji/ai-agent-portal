@@ -56,7 +56,13 @@ class PlaybackService {
                 return false;
             }
 
-            // Step 3: Stream to Ozonetel
+            console.log('[PlaybackService] ✅ Audio ready for streaming', {
+                totalSamples: samples.length,
+                durationSeconds: (samples.length / 8000).toFixed(2),
+                packets: Math.ceil(samples.length / 400)
+            });
+
+            // Step 3: Stream to Ozonetel (single batch - no chunking loop)
             return await this.playAudio(ucid, samples);
 
         } catch (error) {
@@ -78,10 +84,11 @@ class PlaybackService {
                 return false;
             }
 
-            console.log('[PlaybackService] 🔊 Playing audio to call', {
+            console.log('[PlaybackService] 🔊 Streaming audio to call', {
                 ucid,
                 totalSamples: samples.length,
-                durationSeconds: (samples.length / 8000).toFixed(2)
+                durationSeconds: (samples.length / 8000).toFixed(2),
+                packets: Math.ceil(samples.length / 400)
             });
 
             // Initialize playback state
@@ -92,42 +99,34 @@ class PlaybackService {
                 startTime: Date.now()
             });
 
-            // Send audio in chunks (160 samples = 20ms at 8kHz)
-            const chunkSize = 160;
-            let chunkNumber = 0;
-
-            for (let i = 0; i < samples.length; i += chunkSize) {
-                const state = this.playbackStates.get(ucid);
-                
-                // Check if playback was stopped
-                if (!state || !state.playing) {
-                    console.log('[PlaybackService] Playback stopped for', ucid);
-                    break;
-                }
-
-                const chunk = samples.slice(i, i + chunkSize);
-                
-                // Send chunk via WebSocket
-                const sent = await this.streamServer.sendAudioToOzonetel(ucid, chunk);
-                
-                if (!sent) {
-                    console.error('[PlaybackService] Failed to send audio chunk', chunkNumber);
-                    this.stopPlayback(ucid);
-                    return false;
-                }
-
-                chunkNumber++;
-                state.sentSamples = i + chunk.length;
-
-                // Log progress every 50 chunks (~1 second)
-                if (chunkNumber % 50 === 0) {
-                    const progress = ((state.sentSamples / state.totalSamples) * 100).toFixed(1);
-                    console.log(`[PlaybackService] Progress: ${progress}% (${chunkNumber} chunks sent)`);
-                }
+            // Send entire audio buffer at once - streamServer handles 400-sample packetization
+            // This eliminates jitter and allows smooth continuous streaming
+            const sent = await this.streamServer.sendAudioToOzonetel(ucid, samples);
+            
+            if (!sent) {
+                console.error('[PlaybackService] Failed to send audio');
+                this.stopPlayback(ucid);
+                return false;
             }
 
             // Playback complete
             const duration = Date.now() - this.playbackStates.get(ucid).startTime;
+            console.log('[PlaybackService] ✅ Audio streamed successfully', {
+                ucid,
+                totalSamples: samples.length,
+                packets: Math.ceil(samples.length / 400),
+                durationMs: duration
+            });
+
+            this.stopPlayback(ucid);
+            return true;
+
+        } catch (error) {
+            console.error('[PlaybackService] Error playing audio:', error);
+            this.stopPlayback(ucid);
+            return false;
+        }
+    }
             console.log('[PlaybackService] ✅ Playback complete', {
                 ucid,
                 totalChunks: chunkNumber,

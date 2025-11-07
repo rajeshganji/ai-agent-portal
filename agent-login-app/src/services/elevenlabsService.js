@@ -18,7 +18,7 @@ class ElevenLabsService {
         // Default configuration
         this.config = {
             model_id: process.env.ELEVENLABS_MODEL_ID || 'eleven_flash_v2_5', // Ultra-low latency (75ms)
-            output_format: 'pcm_16000', // 16kHz PCM for easy conversion to 8kHz
+            output_format: 'pcm_16000', // 16kHz PCM (officially supported), downsample to 8kHz
             voice_settings: {
                 stability: parseFloat(process.env.ELEVENLABS_STABILITY || '0.5'),
                 similarity_boost: parseFloat(process.env.ELEVENLABS_SIMILARITY || '0.75'),
