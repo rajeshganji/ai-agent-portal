@@ -170,8 +170,8 @@ app.use('/api/ivr/designer', securityConfig.rateLimiters.general, ivrDesignerRou
 // Serve IVR Designer UI (built React app)
 app.use('/ivr-designer', express.static(path.join(__dirname, 'ivr-designer/dist')));
 
-// IVR Designer flow editor route
-app.get('/ivr/designer/flow/:id?', requireAuth, (req, res) => {
+// IVR Designer flow editor route (no auth for hackathon demo)
+app.get('/ivr/designer/flow/:id?', (req, res) => {
     const flowId = req.params.id || 'new';
     console.log(`[IVR Designer] Opening flow editor for: ${flowId}`);
     res.sendFile(path.join(__dirname, 'ivr-designer/dist/index.html'));
