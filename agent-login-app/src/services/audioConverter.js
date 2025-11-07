@@ -156,33 +156,114 @@ class AudioConverter {
     }
 
     /**
-     * Convert MP3 to PCM samples array (for Ozonetel format)
-     * @param {Buffer} mp3Buffer - MP3 audio buffer
-     * @returns {Promise<Array<number>>} - Array of PCM samples
+     * Convert PCM buffer (from ElevenLabs or other sources) to 8kHz samples array
+     * @param {Buffer} pcmBuffer - PCM audio buffer (16-bit signed)
+     * @param {number} inputSampleRate - Input sample rate (default: 16000)
+     * @returns {Promise<Array<number>>} - Array of PCM samples at 8kHz
      */
-    async convertToSamplesArray(mp3Buffer) {
+    async convertPCMToSamplesArray(pcmBuffer, inputSampleRate = 16000) {
         try {
-            const pcmBuffer = await this.convertToPCM(mp3Buffer);
-            
-            // Convert buffer to array of 16-bit samples
-            const samples = [];
-            for (let i = 0; i < pcmBuffer.length; i += 2) {
-                samples.push(pcmBuffer.readInt16LE(i));
-            }
-
-            console.log('[AudioConverter] ✅ Converted to samples array', {
-                totalSamples: samples.length,
-                durationSeconds: (samples.length / 8000).toFixed(2)
+            console.log('[AudioConverter] Converting PCM to 8kHz samples array...', {
+                inputSize: pcmBuffer.length,
+                inputSampleRate
             });
 
-            return samples;
+            // If already 8kHz, just convert to array
+            if (inputSampleRate === 8000) {
+                const samples = [];
+                for (let i = 0; i < pcmBuffer.length; i += 2) {
+                    samples.push(pcmBuffer.readInt16LE(i));
+                }
+                
+                console.log('[AudioConverter] ✅ PCM already 8kHz, converted to array', {
+                    totalSamples: samples.length
+                });
+                
+                return samples;
+            }
+
+            // Otherwise, resample to 8kHz using ffmpeg
+            return new Promise((resolve, reject) => {
+                const chunks = [];
+                const readableStream = new Readable();
+                readableStream.push(pcmBuffer);
+                readableStream.push(null);
+
+                ffmpeg(readableStream)
+                    .inputFormat('s16le')
+                    .inputOptions([
+                        `-ar ${inputSampleRate}`,
+                        '-ac 1'
+                    ])
+                    .audioFrequency(8000)
+                    .audioChannels(1)
+                    .audioCodec('pcm_s16le')
+                    .format('s16le')
+                    .on('error', (err) => {
+                        console.error('[AudioConverter] PCM resampling error:', err.message);
+                        reject(new Error(`FFmpeg resampling failed: ${err.message}`));
+                    })
+                    .on('end', () => {
+                        const resampled = Buffer.concat(chunks);
+                        
+                        // Convert to samples array
+                        const samples = [];
+                        for (let i = 0; i < resampled.length; i += 2) {
+                            samples.push(resampled.readInt16LE(i));
+                        }
+                        
+                        console.log('[AudioConverter] ✅ PCM resampled to 8kHz', {
+                            totalSamples: samples.length,
+                            durationSeconds: (samples.length / 8000).toFixed(2)
+                        });
+                        
+                        resolve(samples);
+                    })
+                    .pipe()
+                    .on('data', (chunk) => {
+                        chunks.push(chunk);
+                    });
+            });
         } catch (error) {
-            console.error('[AudioConverter] Conversion to samples failed:', error);
+            console.error('[AudioConverter] PCM conversion failed:', error);
             throw error;
         }
     }
 
     /**
+     * Convert MP3/PCM buffer to array of PCM samples (16-bit signed integers)
+     * @param {Buffer} audioBuffer - MP3 or PCM audio buffer
+     * @param {string} format - Audio format: 'mp3' or 'pcm'
+     * @param {number} sampleRate - Sample rate for PCM input (default: 16000)
+     * @returns {Promise<Array<number>>} - Array of PCM samples at 8kHz
+     */
+    async convertToSamplesArray(audioBuffer, format = 'mp3', sampleRate = 16000) {
+        try {
+            if (format === 'pcm') {
+                // ElevenLabs PCM format - convert directly
+                return await this.convertPCMToSamplesArray(audioBuffer, sampleRate);
+            } else {
+                // MP3 format (OpenAI) - convert via ffmpeg
+                const pcmBuffer = await this.convertToPCM(audioBuffer);
+                
+                // Convert buffer to array of 16-bit samples
+                const samples = [];
+                for (let i = 0; i < pcmBuffer.length; i += 2) {
+                    samples.push(pcmBuffer.readInt16LE(i));
+                }
+
+                console.log('[AudioConverter] ✅ Converted MP3 to samples array', {
+                    totalSamples: samples.length,
+                    durationSeconds: (samples.length / 8000).toFixed(2)
+                });
+
+                return samples;
+            }
+        } catch (error) {
+            console.error('[AudioConverter] Conversion to samples failed:', error);
+            throw error;
+        }
+    }    /**
      * Get audio duration from PCM buffer
      * @param {Buffer} pcmBuffer - PCM buffer
      * @param {number} sampleRate - Sample rate (default: 8000)

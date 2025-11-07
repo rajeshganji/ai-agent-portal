@@ -3,7 +3,7 @@
  * Manages audio playback queue and streaming to Ozonetel via WebSocket
  */
 
-const openaiService = require('./openaiService');
+const elevenlabsService = require('./elevenlabsService');
 const audioConverter = require('./audioConverter');
 
 class PlaybackService {
@@ -12,7 +12,7 @@ class PlaybackService {
         this.playbackStates = new Map(); // UCID → { playing, currentIndex, paused }
         this.streamServer = null; // Will be set by server.js
         
-        console.log('[PlaybackService] Initialized');
+        console.log('[PlaybackService] Initialized with ElevenLabs TTS');
     }
 
     /**
@@ -33,23 +33,23 @@ class PlaybackService {
      */
     async playText(ucid, text, voice = 'alloy', language = 'en') {
         try {
-            console.log('[PlaybackService] 🎤 Converting text to speech...', {
+            console.log('[PlaybackService] 🎤 Converting text to speech with ElevenLabs...', {
                 ucid,
                 text: text.substring(0, 100),
                 voice,
                 language
             });
 
-            // Step 1: Generate speech with OpenAI TTS
-            const mp3Buffer = await openaiService.textToSpeech(text, voice);
+            // Step 1: Generate speech with ElevenLabs TTS (returns PCM 16kHz)
+            const pcmBuffer = await elevenlabsService.textToSpeech(text, voice, language);
 
-            if (!mp3Buffer || mp3Buffer.length === 0) {
+            if (!pcmBuffer || pcmBuffer.length === 0) {
                 console.error('[PlaybackService] No audio generated from TTS');
                 return false;
             }
 
-            // Step 2: Convert MP3 to PCM samples array
-            const samples = await audioConverter.convertToSamplesArray(mp3Buffer);
+            // Step 2: Convert PCM 16kHz to 8kHz samples array
+            const samples = await audioConverter.convertToSamplesArray(pcmBuffer, 'pcm', 16000);
 
             if (!samples || samples.length === 0) {
                 console.error('[PlaybackService] No samples generated from conversion');
