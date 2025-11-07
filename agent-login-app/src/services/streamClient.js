@@ -28,6 +28,8 @@ class StreamClient {
         // Real-time transcription support
         this.audioProcessors = new Map(); // AudioProcessor per call
         this.transcriptionSessions = new Map(); // Transcription results per call
+        this.transcriptionInProgress = new Map(); // Prevent concurrent transcriptions per UCID
+        this.playbackInProgress = new Map(); // Prevent concurrent playback per UCID
         
         console.log('[StreamClient] Initialized with config:', {
             url: this.config.url,
@@ -284,12 +286,22 @@ class StreamClient {
             return;
         }
 
+        // ✅ Prevent concurrent transcriptions for the same UCID
+        if (this.transcriptionInProgress.get(ucid)) {
+            console.warn('[StreamClient] ⚠️  Transcription already in progress for', ucid, '- skipping duplicate');
+            return;
+        }
+
         try {
+            // Mark as in progress
+            this.transcriptionInProgress.set(ucid, true);
+            
             // Convert to WAV
             const wavBuffer = processor.toWAVBuffer();
             
             if (!wavBuffer) {
                 console.warn('[StreamClient] No WAV buffer generated for', ucid);
+                this.transcriptionInProgress.delete(ucid);
                 return;
             }
 
@@ -344,12 +356,16 @@ class StreamClient {
             
             // ✅ IMMEDIATELY trigger conversational flow (generate AI response + playback)
             // This happens while call is still active, not at stop event!
-            if (text && text.trim().length > 0) {
+            // But only if not already playing back
+            if (text && text.trim().length > 0 && !this.playbackInProgress.get(ucid)) {
                 console.log('[StreamClient] 🎯 Silence detected → Triggering IMMEDIATE playback', {
                     ucid,
                     textSnippet: text.substring(0, 80),
                     timestampMs: Date.now()
                 });
+                
+                // Mark playback in progress
+                this.playbackInProgress.set(ucid, true);
                 
                 try {
                     const flowStartTs = Date.now();
@@ -365,11 +381,19 @@ class StreamClient {
                     });
                 } catch (flowErr) {
                     console.error('[StreamClient] ❌ Error in conversational flow:', flowErr);
+                } finally {
+                    // Clear playback flag so next chunk can trigger new playback
+                    this.playbackInProgress.delete(ucid);
                 }
+            } else if (this.playbackInProgress.get(ucid)) {
+                console.log('[StreamClient] ⏸️  Playback already in progress for', ucid, '- queuing text for later');
             }
             
             // Reset processor for next chunk
             processor.reset();
+            
+            // Clear transcription in-progress flag
+            this.transcriptionInProgress.delete(ucid);
             
         } catch (error) {
             console.error('[StreamClient] ❌ Transcription error:', error.message);
@@ -389,6 +413,9 @@ class StreamClient {
             if (processor) {
                 processor.reset();
             }
+            
+            // Clear transcription in-progress flag even on error
+            this.transcriptionInProgress.delete(ucid);
         }
     }
 
@@ -416,6 +443,10 @@ class StreamClient {
             if (openaiService.enabled && this.audioProcessors.has(ucid)) {
                 await this.finalizeTranscription(ucid);
             }
+
+            // Clean up flags
+            this.transcriptionInProgress.delete(ucid);
+            this.playbackInProgress.delete(ucid);
 
             // Save audio buffer to file
             await this.saveAudioBuffer(ucid);
