@@ -50,8 +50,8 @@ class IVRFlow {
     
         // Initialize WebSocket streaming for AI processing
         const wsUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
-            ? `ws://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
-            : process.env.STREAM_WS_URL || 'ws://ai-agent-portal-production.up.railway.app/ws';
+            ? `wss://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
+            : process.env.STREAM_WS_URL || 'wss://ai-agent-portal-production.up.railway.app/ws';
             
         this.response.addStream("520228", wsUrl, "true");
         
@@ -93,8 +93,8 @@ class IVRFlow {
             
             // Use WebSocket streaming instead of direct dial
             const wsUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
-                ? `ws://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
-                : process.env.STREAM_WS_URL || 'ws://ai-agent-portal-production.up.railway.app/ws';
+                ? `wss://${process.env.RAILWAY_PUBLIC_DOMAIN}/ws`
+                : process.env.STREAM_WS_URL || 'wss://ai-agent-portal-production.up.railway.app/ws';
                 
             this.response.addStream(selection.number, wsUrl, 'true');
         } else {
