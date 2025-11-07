@@ -127,21 +127,6 @@ class PlaybackService {
             return false;
         }
     }
-            console.log('[PlaybackService] ✅ Playback complete', {
-                ucid,
-                totalChunks: chunkNumber,
-                durationMs: duration
-            });
-
-            this.playbackStates.delete(ucid);
-            return true;
-
-        } catch (error) {
-            console.error('[PlaybackService] ❌ Error playing audio:', error.message);
-            this.stopPlayback(ucid);
-            return false;
-        }
-    }
 
     /**
      * Queue audio for playback (for future enhancement)
