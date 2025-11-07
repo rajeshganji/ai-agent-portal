@@ -177,7 +177,7 @@ class StreamServer {
     /**
      * Send audio samples to Ozonetel via WebSocket
      * @param {string} ucid - Call ID
-     * @param {Array<number>} samples - PCM audio samples
+     * @param {Array<number>} samples - PCM audio samples (16-bit signed integers)
      * @returns {Promise<boolean>} - Success status
      */
     async sendAudioToOzonetel(ucid, samples) {
@@ -189,21 +189,57 @@ class StreamServer {
                 return false;
             }
 
-            // Create media event message (matching Ozonetel format)
-            const mediaMessage = {
-                event: 'media',
-                ucid: ucid,
-                type: 'audio/x-mulaw',
-                media: {
-                    samples: samples,
-                    sampleRate: 8000,
-                    numberOfFrames: samples.length,
-                    channelCount: 1
+            // CRITICAL: Remove DC offset to eliminate clicks (center audio at zero)
+            const cleanedSamples = this._removeDCOffset(samples);
+            
+            // CRITICAL: Apply crossfade from last packet to prevent clicks between chunks
+            const smoothedSamples = this._applyCrossfade(ucid, cleanedSamples);
+            
+            // Send in 400-sample packets (50ms at 8kHz) - matching Ozonetel format
+            const PACKET_SIZE = 400;
+            let packetsSent = 0;
+            
+            for (let i = 0; i < smoothedSamples.length; i += PACKET_SIZE) {
+                let chunk = smoothedSamples.slice(i, i + PACKET_SIZE);
+                
+                // CRITICAL: Fade-out padding instead of zeros to prevent click at end
+                if (chunk.length < PACKET_SIZE) {
+                    chunk = this._applyFadeoutPadding(chunk, PACKET_SIZE);
                 }
-            };
-
-            // Send to Ozonetel
-            ws.send(JSON.stringify(mediaMessage));
+                
+                if (chunk.length === PACKET_SIZE) {
+                    // CRITICAL: Match Ozonetel's EXACT format (type: "media", not event: "media")
+                    const packet = {
+                        type: 'media',
+                        ucid: ucid,
+                        data: {
+                            samples: chunk,
+                            bitsPerSample: 16,
+                            sampleRate: 8000,
+                            channelCount: 1,
+                            numberOfFrames: chunk.length,
+                            type: 'data'
+                        }
+                    };
+                    
+                    ws.send(JSON.stringify(packet));
+                    packetsSent++;
+                    
+                    // CRITICAL: 400 samples at 8kHz = 50ms - send packets at correct timing
+                    // Use setImmediate for non-blocking delay in Node.js
+                    if (i + PACKET_SIZE < smoothedSamples.length) {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                }
+            }
+            
+            // Store last sample for next chunk's crossfade
+            if (smoothedSamples.length > 0) {
+                if (!this._lastSamples) this._lastSamples = new Map();
+                this._lastSamples.set(ucid, smoothedSamples[smoothedSamples.length - 1]);
+            }
+            
+            console.log(`[StreamServer] 📤 Sent ${packetsSent} audio packets (${smoothedSamples.length} samples) to UCID: ${ucid}`);
             
             return true;
 
@@ -211,6 +247,64 @@ class StreamServer {
             console.error('[StreamServer] ❌ Error sending audio to Ozonetel:', error.message);
             return false;
         }
+    }
+    
+    /**
+     * CRITICAL FIX #1: Remove DC offset to eliminate clicks
+     * Centers audio at zero to prevent popping sounds
+     */
+    _removeDCOffset(samples) {
+        if (!samples || samples.length === 0) return samples;
+        
+        // Calculate mean
+        const mean = samples.reduce((sum, val) => sum + val, 0) / samples.length;
+        
+        // Subtract mean from all samples
+        return samples.map(sample => Math.round(sample - mean));
+    }
+    
+    /**
+     * CRITICAL FIX #2: Apply crossfade from previous packet's last sample
+     * Eliminates clicks at packet boundaries
+     */
+    _applyCrossfade(ucid, samples) {
+        if (!samples || samples.length === 0) return samples;
+        if (!this._lastSamples) this._lastSamples = new Map();
+        
+        const lastSample = this._lastSamples.get(ucid) || 0;
+        if (lastSample === 0) return samples;
+        
+        const result = [...samples];
+        const fadeLength = Math.min(20, samples.length); // 2.5ms at 8kHz
+        
+        // Linear crossfade from lastSample to current first samples
+        for (let i = 0; i < fadeLength; i++) {
+            const t = i / fadeLength; // 0 to 1
+            result[i] = Math.round(lastSample * (1 - t) + samples[i] * t);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * CRITICAL FIX #3: Fade out padding instead of zero padding
+     * Prevents click at end of audio
+     */
+    _applyFadeoutPadding(samples, targetSize) {
+        if (samples.length >= targetSize) return samples;
+        
+        const result = [...samples];
+        const paddingNeeded = targetSize - samples.length;
+        const lastValue = samples[samples.length - 1] || 0;
+        
+        // Create fade-out from lastValue to 0
+        for (let i = 0; i < paddingNeeded; i++) {
+            const t = i / paddingNeeded; // 0 to 1
+            const fadedValue = Math.round(lastValue * (1 - t));
+            result.push(fadedValue);
+        }
+        
+        return result;
     }
 
     /**
@@ -255,11 +349,21 @@ class StreamServer {
             if (message.event === 'start' && message.ucid) {
                 this.ucidToConnection.set(message.ucid, ws);
                 ws.currentUcid = message.ucid;
+                
+                // Initialize last sample for this call (prevents clicks)
+                if (!this._lastSamples) this._lastSamples = new Map();
+                this._lastSamples.set(message.ucid, 0);
+                
                 console.log('[StreamServer] 📌 Mapped UCID to connection:', message.ucid);
             }
             
             // Clean up mapping on stop (but delay to allow any pending playback)
             if (message.event === 'stop' && message.ucid) {
+                // Clear last sample for this UCID (prevents clicks on next call)
+                if (this._lastSamples) {
+                    this._lastSamples.delete(message.ucid);
+                }
+                
                 // Delay deletion to allow final playback to complete
                 setTimeout(() => {
                     this.ucidToConnection.delete(message.ucid);
