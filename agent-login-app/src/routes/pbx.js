@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const IVRFlow = require('../lib/kookoo/ivrflow');
+const flowEngine = require('../services/flowEngine');
 
 // Import WebSocket connections from server
 let agentConnections;
@@ -8,20 +9,40 @@ function setAgentConnections(connections) {
     agentConnections = connections;
 }
 
-// IVR Flow Handler - Public API (no authentication required)
-router.get('/ivrflow', (req, res) => {
+// AI-Powered IVR Flow Handler with OpenAI - Public API
+router.get('/ivrflow', async (req, res) => {
     console.log('[IVR] Incoming call parameters:', req.query);
     
-    // Create IVR flow instance with query parameters
-    const ivrFlow = new IVRFlow({
-        sid: req.query.sid,
-        event: req.query.event,
-        data: req.query.data
-    });
-    
-    // Process the flow and send response
-    const response = ivrFlow.processFlow();
-    response.send(res);
+    try {
+        // Extract call parameters
+        const callId = req.query.sid || req.query.cid || `call_${Date.now()}`;
+        const event = req.query.event || 'NewCall';
+        const data = req.query.data || req.query;
+        
+        // Use flow engine with OpenAI integration
+        const xmlResponse = await flowEngine.executeTestFlow({
+            callId,
+            event,
+            data
+        });
+        
+        // Send XML response
+        res.set('Content-Type', 'text/xml');
+        res.send(xmlResponse);
+        
+    } catch (error) {
+        console.error('[IVR] Error processing flow:', error);
+        
+        // Fallback to basic IVR
+        const ivrFlow = new IVRFlow({
+            sid: req.query.sid,
+            event: req.query.event,
+            data: req.query.data
+        });
+        
+        const response = ivrFlow.processFlow();
+        response.send(res);
+    }
 });
 
 // Receive call notification from PBX - Public API (no authentication required)
