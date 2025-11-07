@@ -284,6 +284,16 @@ let streamClient = null;
 // Export streamClient getter for routes
 const getStreamClient = () => streamClient;
 
+// Ensure HTTP server handles upgrade requests properly (for Railway proxy)
+server.on('upgrade', (request, socket, head) => {
+    console.log('[Server] 🔄 Upgrade request received');
+    console.log('[Server] Upgrade URL:', request.url);
+    console.log('[Server] Upgrade headers:', JSON.stringify(request.headers, null, 2));
+    
+    // The WebSocket.Server instances will handle this automatically
+    // This log helps us see if upgrade requests are reaching the server
+});
+
 server.listen(PORT, '0.0.0.0', async () => {
     console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
     console.log(`✅ [WebSocket-Agent] Agent connections at ws://0.0.0.0:${PORT}/agent`);
