@@ -69,7 +69,14 @@ class AudioProcessor {
         const sum = samples.reduce((acc, sample) => acc + (sample * sample), 0);
         const rms = Math.sqrt(sum / samples.length);
         
-        return rms > this.config.silenceAmplitude;
+        const hasAudio = rms > this.config.silenceAmplitude;
+        
+        // Debug log every 50 packets to monitor silence detection
+        if (this.totalSamples % 8000 === 0) { // Every 1 second
+            console.log(`[AudioProcessor] ${this.ucid}: RMS=${rms.toFixed(2)}, Threshold=${this.config.silenceAmplitude}, Audio=${hasAudio}, SilentPackets=${this.consecutiveSilentPackets}`);
+        }
+        
+        return hasAudio;
     }
 
     /**
@@ -81,11 +88,6 @@ class AudioProcessor {
         const hasMaxAudio = duration >= this.config.maxAudioDuration;
         const silenceDetected = this.isSilent();
         
-        // Don't send if too little audio (< min duration)
-        if (duration < this.config.minAudioDuration) {
-            return false;
-        }
-        
         // Send if:
         // 1. Reached max duration (force send to prevent too-long chunks)
         if (hasMaxAudio) {
@@ -93,9 +95,17 @@ class AudioProcessor {
             return true;
         }
         
-        // 2. Have sufficient audio AND clear silence detected
-        if (hasMinAudio && silenceDetected) {
-            console.log(`[AudioProcessor] ${this.ucid}: Silence detected after ${duration}ms - sending`);
+        // 2. Silence detected after user stopped speaking (muted phone, stopped talking, etc.)
+        // Send even if we haven't reached minAudioDuration - captures short utterances
+        if (silenceDetected && this.totalSamples > 0) {
+            const silenceDuration = Date.now() - this.lastAudioTime;
+            console.log(`[AudioProcessor] ${this.ucid}: Silence detected (${silenceDuration}ms quiet) after ${duration}ms audio - sending`);
+            return true;
+        }
+        
+        // 3. Have sufficient audio (legacy behavior for continuous speech)
+        if (hasMinAudio) {
+            console.log(`[AudioProcessor] ${this.ucid}: Min duration reached (${duration}ms) - sending`);
             return true;
         }
         
