@@ -1,5 +1,4 @@
 const OpenAI = require('openai');
-const logger = require('../lib/logger');
 const fs = require('fs');
 const path = require('path');
 
@@ -84,7 +83,7 @@ class OpenAIService {
         }
 
         try {
-            logger.info('[OpenAI] Detecting intent...', { userText, possibleIntents });
+            console.info('[OpenAI] Detecting intent...', { userText, possibleIntents });
             
             const systemPrompt = `You are an intent detection system for an IVR (phone) application.
 Analyze the user's spoken input and determine their intent.
@@ -112,7 +111,7 @@ Respond ONLY with valid JSON in this format:
 
             const result = JSON.parse(response.choices[0].message.content);
             
-            logger.info('[OpenAI] Intent detected', result);
+            console.info('[OpenAI] Intent detected', result);
             
             return {
                 intent: result.intent || 'unknown',
@@ -120,7 +119,7 @@ Respond ONLY with valid JSON in this format:
                 entities: result.entities || {}
             };
         } catch (error) {
-            logger.error('[OpenAI] Intent detection error:', error);
+            console.error('[OpenAI] Intent detection error:', error);
             throw error;
         }
     }
@@ -138,7 +137,7 @@ Respond ONLY with valid JSON in this format:
         }
 
         try {
-            logger.info('[OpenAI] Converting text to speech...', { text, voice, model });
+            console.info('[OpenAI] Converting text to speech...', { text, voice, model });
             
             const response = await this.client.audio.speech.create({
                 model: model,
@@ -149,14 +148,14 @@ Respond ONLY with valid JSON in this format:
 
             const buffer = Buffer.from(await response.arrayBuffer());
             
-            logger.info('[OpenAI] Text-to-speech completed', { 
+            console.info('[OpenAI] Text-to-speech completed', { 
                 textLength: text.length,
                 audioSize: buffer.length 
             });
             
             return buffer;
         } catch (error) {
-            logger.error('[OpenAI] Text-to-speech error:', error);
+            console.error('[OpenAI] Text-to-speech error:', error);
             throw error;
         }
     }
@@ -174,7 +173,7 @@ Respond ONLY with valid JSON in this format:
         }
 
         try {
-            logger.info('[OpenAI] Generating conversational response...', { userMessage });
+            console.info('[OpenAI] Generating conversational response...', { userMessage });
             
             const messages = [
                 { 
@@ -194,11 +193,11 @@ Respond ONLY with valid JSON in this format:
 
             const reply = response.choices[0].message.content;
             
-            logger.info('[OpenAI] Response generated', { reply });
+            console.info('[OpenAI] Response generated', { reply });
             
             return reply;
         } catch (error) {
-            logger.error('[OpenAI] Response generation error:', error);
+            console.error('[OpenAI] Response generation error:', error);
             throw error;
         }
     }

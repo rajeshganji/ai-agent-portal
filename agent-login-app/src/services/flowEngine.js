@@ -1,6 +1,5 @@
 const Response = require('../lib/kookoo/response');
 const openaiService = require('./openaiService');
-const logger = require('../lib/logger');
 
 /**
  * Simple Flow Execution Engine
@@ -32,7 +31,7 @@ class FlowEngine {
      */
     clearSession(callId) {
         this.sessions.delete(callId);
-        logger.info('[FlowEngine] Session cleared', { callId });
+        console.info('[FlowEngine] Session cleared', { callId });
     }
 
     /**
@@ -43,7 +42,7 @@ class FlowEngine {
         const { callId, event, data } = params;
         const session = this.getSession(callId);
         
-        logger.info('[FlowEngine] Executing speech flow', { 
+        console.info('[FlowEngine] Executing speech flow', { 
             callId, 
             event, 
             currentStep: session.currentStep 
@@ -66,7 +65,7 @@ class FlowEngine {
                     return this.handleError(response, session);
             }
         } catch (error) {
-            logger.error('[FlowEngine] Flow execution error', { callId, error });
+            console.error('[FlowEngine] Flow execution error', { callId, error });
             return this.handleError(response, session, error.message);
         }
     }
@@ -75,7 +74,7 @@ class FlowEngine {
      * Handle call start - greet and ask for input
      */
     handleStart(response, session) {
-        logger.info('[FlowEngine] Starting call flow', { callId: session.callId });
+        console.info('[FlowEngine] Starting call flow', { callId: session.callId });
         
         // Greet the user
         response.addPlayText('Hello! Welcome to AI Agent Portal. How can I help you today?');
@@ -99,7 +98,7 @@ class FlowEngine {
      * Handle speech input - transcribe and detect intent
      */
     async handleSpeechInput(response, session, data) {
-        logger.info('[FlowEngine] Processing speech input', { 
+        console.info('[FlowEngine] Processing speech input', { 
             callId: session.callId,
             data 
         });
@@ -115,7 +114,7 @@ class FlowEngine {
         try {
             // In real implementation, fetch audio from data.recordUrl
             // For now, we'll simulate with a mock
-            logger.info('[FlowEngine] Audio recorded at:', data.recordUrl);
+            console.info('[FlowEngine] Audio recorded at:', data.recordUrl);
             
             // TODO: Download audio from recordUrl
             // const audioBuffer = await downloadAudio(data.recordUrl);
@@ -124,7 +123,7 @@ class FlowEngine {
             // For testing, use DTMF or mock text
             const userText = data.digits || data.data || 'I want to check my account balance';
             
-            logger.info('[FlowEngine] User input:', userText);
+            console.info('[FlowEngine] User input:', userText);
             
             // Detect intent
             const intentResult = await openaiService.detectIntent(userText, [
@@ -167,7 +166,7 @@ class FlowEngine {
             return response.toXML();
             
         } catch (error) {
-            logger.error('[FlowEngine] Error processing speech:', error);
+            console.error('[FlowEngine] Error processing speech:', error);
             response.addPlayText('Sorry, I encountered an error processing your request. Please try again later.');
             response.addHangup();
             this.clearSession(session.callId);
@@ -199,7 +198,7 @@ class FlowEngine {
      * Handle errors
      */
     handleError(response, session, errorMessage = 'An error occurred') {
-        logger.error('[FlowEngine] Error in flow', { 
+        console.error('[FlowEngine] Error in flow', { 
             callId: session.callId, 
             error: errorMessage 
         });
@@ -217,7 +216,7 @@ class FlowEngine {
         const { callId, event, data } = params;
         const session = this.getSession(callId);
         
-        logger.info('[FlowEngine] Executing test flow', { callId, event });
+        console.info('[FlowEngine] Executing test flow', { callId, event });
 
         const response = new Response();
 
@@ -259,7 +258,7 @@ class FlowEngine {
                         );
                         responseText = enhancedResponse;
                     } catch (error) {
-                        logger.warn('[FlowEngine] AI enhancement failed, using default response');
+                        console.warn('[FlowEngine] AI enhancement failed, using default response');
                     }
                 }
                 
