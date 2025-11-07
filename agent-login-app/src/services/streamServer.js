@@ -258,10 +258,14 @@ class StreamServer {
                 console.log('[StreamServer] 📌 Mapped UCID to connection:', message.ucid);
             }
             
-            // Clean up mapping on stop
+            // Clean up mapping on stop (but delay to allow any pending playback)
             if (message.event === 'stop' && message.ucid) {
-                this.ucidToConnection.delete(message.ucid);
-                console.log('[StreamServer] 🗑️  Removed UCID mapping:', message.ucid);
+                // Delay deletion to allow final playback to complete
+                setTimeout(() => {
+                    this.ucidToConnection.delete(message.ucid);
+                    console.log('[StreamServer] 🗑️  Removed UCID mapping (delayed):', message.ucid);
+                }, 10000); // 10 second delay
+                console.log('[StreamServer] 📌 UCID mapping will be removed in 10s:', message.ucid);
             }
             
             // Compact logging - only log important events

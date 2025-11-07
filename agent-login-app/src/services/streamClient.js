@@ -342,6 +342,32 @@ class StreamClient {
                 transcriptionTimeMs: transcriptionTime
             });
             
+            // ✅ IMMEDIATELY trigger conversational flow (generate AI response + playback)
+            // This happens while call is still active, not at stop event!
+            if (text && text.trim().length > 0) {
+                console.log('[StreamClient] 🎯 Silence detected → Triggering IMMEDIATE playback', {
+                    ucid,
+                    textSnippet: text.substring(0, 80),
+                    timestampMs: Date.now()
+                });
+                
+                try {
+                    const flowStartTs = Date.now();
+                    const flowResult = await flowEngine.executeConversationalFlow(ucid, text, { 
+                        language: session.language || 'en' 
+                    });
+                    const flowElapsed = Date.now() - flowStartTs;
+                    
+                    console.log('[StreamClient] ✅ Conversational flow completed', { 
+                        ucid, 
+                        success: flowResult, 
+                        elapsedMs: flowElapsed 
+                    });
+                } catch (flowErr) {
+                    console.error('[StreamClient] ❌ Error in conversational flow:', flowErr);
+                }
+            }
+            
             // Reset processor for next chunk
             processor.reset();
             
@@ -488,17 +514,9 @@ class StreamClient {
                 }))
             });
             
-            // Trigger conversational flow (generate AI response + playback)
-            try {
-                console.log('[StreamClient] ▶️  Triggering FlowEngine for playback', { ucid, finalTextSnippet: finalText.substring(0, 120) });
-                const flowStartTs = Date.now();
-                const flowResult = await flowEngine.executeConversationalFlow(ucid, finalText, { language: session.language });
-                const flowElapsed = Date.now() - flowStartTs;
-                console.log('[StreamClient] ▶️  FlowEngine result:', { ucid, flowResult, elapsedMs: flowElapsed });
-            } catch (flowErr) {
-                console.error('[StreamClient] ❌ Error running FlowEngine after transcription:', flowErr);
-            }
-
+            // Note: Conversational flow is now triggered immediately after each transcription chunk
+            // (not here at finalization), so playback happens while call is still active
+            
             // Cleanup
             processor.destroy();
             this.audioProcessors.delete(ucid);
