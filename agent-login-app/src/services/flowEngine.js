@@ -92,7 +92,7 @@ class FlowEngine {
         
         session.currentStep = 'listening';
         
-        return response.toXML();
+        return response.getXML();
     }
 
     /**
@@ -109,7 +109,7 @@ class FlowEngine {
             response.addPlayText('Sorry, I did not receive your input. Please try again.');
             response.addHangup();
             this.clearSession(session.callId);
-            return response.toXML();
+            return response.getXML();
         }
 
         try {
@@ -164,14 +164,14 @@ class FlowEngine {
             
             session.currentStep = 'responding';
             
-            return response.toXML();
+            return response.getXML();
             
         } catch (error) {
             console.error('[FlowEngine] Error processing speech:', error);
             response.addPlayText('Sorry, I encountered an error processing your request. Please try again later.');
             response.addHangup();
             this.clearSession(session.callId);
-            return response.toXML();
+            return response.getXML();
         }
     }
 
@@ -191,7 +191,7 @@ class FlowEngine {
             response.addPlayText('Thank you for calling. Goodbye!');
             response.addHangup();
             this.clearSession(session.callId);
-            return response.toXML();
+            return response.getXML();
         }
     }
 
@@ -207,7 +207,7 @@ class FlowEngine {
         response.addPlayText('Sorry, something went wrong. Please try again later.');
         response.addHangup();
         this.clearSession(session.callId);
-        return response.toXML();
+        return response.getXML();
     }
 
     /**
@@ -281,7 +281,7 @@ class FlowEngine {
                 this.clearSession(callId);
         }
 
-        return response.toXML();
+        return response.getXML();
     }
 
     /**
