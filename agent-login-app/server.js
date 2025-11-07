@@ -310,6 +310,9 @@ async function startServer() {
     // Initialize StreamServer with StreamClient handler BEFORE server.listen()
     streamServer = new StreamServer(server, streamClient);
     global.streamServer = streamServer; // Store globally for status API
+    console.log('[Server] ✅ StreamServer constructor completed');
+    console.log('[Server] ✅ StreamServer instance:', !!streamServer);
+    console.log('[Server] ✅ StreamServer.wss:', !!streamServer.wss);
     console.log('[StreamServer] Ready to receive events at: /ws');
     console.log('[StreamServer] StreamClient connected for message processing');
 
