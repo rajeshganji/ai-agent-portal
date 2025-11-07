@@ -1,0 +1,13 @@
+{
+  "name": "ai-agent-portal-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install": "cd agent-login-app && npm install --production",
+    "start": "cd agent-login-app && npm start",
+    "dev": "cd agent-login-app && npm run dev"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
