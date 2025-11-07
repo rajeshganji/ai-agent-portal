@@ -23,7 +23,8 @@ if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
 const app = express();
 const server = require('http').createServer(app);
 
-// WebSocket server for agent connections (on /agent path)
+// DISABLED: WebSocket server for agent connections - focusing on /ws (audio stream) first
+/*
 const wss = new WebSocket.Server({ 
     server,
     path: '/agent',  // Separate path for agent connections
@@ -34,6 +35,7 @@ const wss = new WebSocket.Server({
         callback(true); // Accept all for now, add verification in production
     }
 });
+*/
 const agentConnections = new Map();
 
 // Trust proxy - Important for Railway deployment
@@ -88,7 +90,8 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
-// WebSocket connection handling for agents
+// DISABLED: WebSocket connection handling for agents - focusing on /ws (audio stream) first
+/*
 wss.on('connection', (ws, req) => {
     console.log('[WebSocket-Agent] New agent connection');
     
@@ -147,6 +150,7 @@ wss.on('connection', (ws, req) => {
         }
     });
 });
+*/
 
 // Auth routes with strict rate limiting
 const authRoutes = require('./src/routes/auth');
@@ -318,8 +322,8 @@ async function startServer() {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
-    console.log(`✅ [WebSocket-Agent] Agent connections at ws://0.0.0.0:${PORT}/agent`);
-    console.log(`✅ [WebSocket-Stream] Ozonetel streaming at ws://0.0.0.0:${PORT}/ws`);
+    console.log(`✅ [WebSocket-AudioStream] Ozonetel audio streaming at ws://0.0.0.0:${PORT}/ws`);
+    // console.log(`✅ [WebSocket-Agent] Agent connections at ws://0.0.0.0:${PORT}/agent`); // DISABLED
     console.log('[Server] Available routes:');
     console.log('- GET  /');
     console.log('- GET  /toolbar');
