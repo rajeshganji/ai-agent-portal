@@ -62,11 +62,16 @@ class ElevenLabsService {
             // Get voice ID from mapping
             const voiceId = this.voiceMap[voice] || this.voiceMap['alloy'];
             
+            // Normalize language code to 2-letter ISO 639-1 format
+            // ElevenLabs expects: 'en', 'hi', 'te', etc. (not 'english', 'hindi', etc.)
+            const normalizedLanguage = this._normalizeLanguageCode(language);
+            
             console.log('[ElevenLabs] Converting text to speech...', { 
                 text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
                 voice,
                 voiceId,
-                language,
+                originalLanguage: language,
+                normalizedLanguage,
                 model: this.config.model_id
             });
 
@@ -77,9 +82,9 @@ class ElevenLabsService {
                 voice_settings: this.config.voice_settings
             };
 
-            // Add language code if specified
-            if (language) {
-                payload.language_code = language;
+            // Add language code if specified and valid
+            if (normalizedLanguage) {
+                payload.language_code = normalizedLanguage;
             }
 
             // Make API request
@@ -214,6 +219,68 @@ class ElevenLabsService {
             console.error('[ElevenLabs] Streaming TTS error:', error.message);
             throw error;
         }
+    }
+
+    /**
+     * Normalize language code to ISO 639-1 format (2-letter code)
+     * @param {string} language - Language code or name
+     * @returns {string|null} - Normalized 2-letter code or null
+     * @private
+     */
+    _normalizeLanguageCode(language) {
+        if (!language) return null;
+        
+        // If already 2 letters, return as-is
+        if (language.length === 2) {
+            return language.toLowerCase();
+        }
+        
+        // Map common language names/codes to ISO 639-1
+        const languageMap = {
+            'english': 'en',
+            'hindi': 'hi',
+            'telugu': 'te',
+            'tamil': 'ta',
+            'kannada': 'kn',
+            'malayalam': 'ml',
+            'spanish': 'es',
+            'french': 'fr',
+            'german': 'de',
+            'italian': 'it',
+            'portuguese': 'pt',
+            'russian': 'ru',
+            'japanese': 'ja',
+            'korean': 'ko',
+            'chinese': 'zh',
+            'arabic': 'ar',
+            'dutch': 'nl',
+            'turkish': 'tr',
+            'filipino': 'fil',
+            'polish': 'pl',
+            'swedish': 'sv',
+            'bulgarian': 'bg',
+            'romanian': 'ro',
+            'czech': 'cs',
+            'greek': 'el',
+            'finnish': 'fi',
+            'croatian': 'hr',
+            'malay': 'ms',
+            'slovak': 'sk',
+            'danish': 'da',
+            'ukrainian': 'uk',
+            'hungarian': 'hu',
+            'norwegian': 'no',
+            'vietnamese': 'vi'
+        };
+        
+        const normalized = languageMap[language.toLowerCase()];
+        
+        if (!normalized) {
+            console.warn('[ElevenLabs] Unknown language:', language, '- will let ElevenLabs auto-detect');
+            return null;
+        }
+        
+        return normalized;
     }
 }
 
