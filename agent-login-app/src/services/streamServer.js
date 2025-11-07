@@ -224,12 +224,6 @@ class StreamServer {
                     
                     ws.send(JSON.stringify(packet));
                     packetsSent++;
-                    
-                    // CRITICAL: 400 samples at 8kHz = 50ms - send packets at correct timing
-                    // Use setImmediate for non-blocking delay in Node.js
-                    if (i + PACKET_SIZE < smoothedSamples.length) {
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    }
                 }
             }
             

@@ -124,9 +124,6 @@ class PlaybackService {
                     const progress = ((state.sentSamples / state.totalSamples) * 100).toFixed(1);
                     console.log(`[PlaybackService] Progress: ${progress}% (${chunkNumber} chunks sent)`);
                 }
-
-                // Small delay to prevent overwhelming (20ms per chunk)
-                await this.delay(20);
             }
 
             // Playback complete
@@ -240,11 +237,6 @@ class PlaybackService {
                 if (!success) {
                     console.error('[PlaybackService] Sequence failed at segment', i + 1);
                     return false;
-                }
-
-                // Small pause between segments
-                if (i < textSegments.length - 1) {
-                    await this.delay(500);
                 }
             }
 
