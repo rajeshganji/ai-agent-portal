@@ -11,6 +11,7 @@ const cors = require('cors');
 const securityConfig = require('./config/security');
 const StreamClient = require('./src/services/streamClient');
 const StreamServer = require('./src/services/streamServer');
+const playbackService = require('./src/services/playbackService');
 
 // Validate critical environment variables
 if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
@@ -336,6 +337,10 @@ async function startServer() {
     console.log('[Server] ✅ StreamServer.wss:', !!streamServer.wss);
     console.log('[StreamServer] Ready to receive events at: /ws');
     console.log('[StreamServer] StreamClient connected for message processing');
+    
+    // Link PlaybackService to StreamServer for audio output
+    playbackService.setStreamServer(streamServer);
+    console.log('[PlaybackService] Linked to StreamServer for audio playback');
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
@@ -353,8 +358,10 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('🎉 Server is ready!');
     console.log('=================================');
     
-    // Set stream client getter for routes
+    // Set stream client and playback service getters for routes
     streamModule.setStreamClientGetter(getStreamClient);
+    streamModule.setPlaybackServiceGetter(() => playbackService);
+    console.log('[Routes] Stream client and playback service linked to API endpoints');
 });
 }
 

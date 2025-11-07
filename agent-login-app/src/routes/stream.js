@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 
-// Get stream client instance - will be set by server.js
+// Get stream client and playback service instances - will be set by server.js
 let getStreamClient = null;
+let getPlaybackService = null;
 
 function setStreamClientGetter(getter) {
     getStreamClient = getter;
+}
+
+function setPlaybackServiceGetter(getter) {
+    getPlaybackService = getter;
 }
 
 /**
@@ -147,7 +152,129 @@ router.post('/set-language', (req, res) => {
     }
 });
 
+/**
+ * Play text as speech
+ * POST /api/stream/play-text
+ * Body: { ucid: string, text: string, voice?: string, language?: string }
+ */
+router.post('/play-text', async (req, res) => {
+    const playbackService = getPlaybackService ? getPlaybackService() : null;
+    
+    if (!playbackService) {
+        return res.status(503).json({
+            success: false,
+            error: 'Playback service not initialized'
+        });
+    }
+
+    const { ucid, text, voice, language } = req.body;
+
+    if (!ucid || !text) {
+        return res.status(400).json({
+            success: false,
+            error: 'Missing required fields: ucid and text'
+        });
+    }
+
+    try {
+        console.log('[API] Playing text for UCID:', ucid, '- Text:', text.substring(0, 50));
+        
+        const success = await playbackService.playText(
+            ucid, 
+            text, 
+            voice || 'alloy',
+            language || 'en'
+        );
+        
+        if (success) {
+            res.json({
+                success: true,
+                message: 'Text playback started',
+                ucid,
+                textLength: text.length,
+                voice: voice || 'alloy'
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                error: 'Failed to play text - check server logs'
+            });
+        }
+    } catch (error) {
+        console.error('[API] Play text error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * Stop playback
+ * POST /api/stream/stop-playback
+ * Body: { ucid: string }
+ */
+router.post('/stop-playback', (req, res) => {
+    const playbackService = getPlaybackService ? getPlaybackService() : null;
+    
+    if (!playbackService) {
+        return res.status(503).json({
+            success: false,
+            error: 'Playback service not initialized'
+        });
+    }
+
+    const { ucid } = req.body;
+
+    if (!ucid) {
+        return res.status(400).json({
+            success: false,
+            error: 'Missing required field: ucid'
+        });
+    }
+
+    try {
+        playbackService.stopPlayback(ucid);
+        res.json({
+            success: true,
+            message: `Playback stopped for UCID: ${ucid}`,
+            ucid
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * Get playback status
+ * GET /api/stream/playback-status/:ucid
+ */
+router.get('/playback-status/:ucid', (req, res) => {
+    const playbackService = getPlaybackService ? getPlaybackService() : null;
+    
+    if (!playbackService) {
+        return res.status(503).json({
+            success: false,
+            error: 'Playback service not initialized'
+        });
+    }
+
+    const { ucid } = req.params;
+    const status = playbackService.getStatus(ucid);
+    
+    res.json({
+        success: true,
+        ucid,
+        status: status || { playing: false },
+        isPlaying: playbackService.isPlaying(ucid)
+    });
+});
+
 module.exports = {
     router,
-    setStreamClientGetter
+    setStreamClientGetter,
+    setPlaybackServiceGetter
 };

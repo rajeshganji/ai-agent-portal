@@ -10,6 +10,7 @@ class StreamServer {
         console.log('[StreamServer] 🚀 CONSTRUCTOR CALLED - Initializing...');
         this.streamClient = streamClient;
         this.connections = new Map();
+        this.ucidToConnection = new Map(); // Map UCID to WebSocket connection
         this.server = server;
         
         console.log('[StreamServer] Creating WebSocket.Server with noServer mode');
@@ -173,13 +174,99 @@ class StreamServer {
         }
     }
 
+    /**
+     * Send audio samples to Ozonetel via WebSocket
+     * @param {string} ucid - Call ID
+     * @param {Array<number>} samples - PCM audio samples
+     * @returns {Promise<boolean>} - Success status
+     */
+    async sendAudioToOzonetel(ucid, samples) {
+        try {
+            const ws = this.ucidToConnection.get(ucid);
+            
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.error('[StreamServer] ❌ No active connection for UCID:', ucid);
+                return false;
+            }
+
+            // Create media event message (matching Ozonetel format)
+            const mediaMessage = {
+                event: 'media',
+                ucid: ucid,
+                type: 'audio/x-mulaw',
+                media: {
+                    samples: samples,
+                    sampleRate: 8000,
+                    numberOfFrames: samples.length,
+                    channelCount: 1
+                }
+            };
+
+            // Send to Ozonetel
+            ws.send(JSON.stringify(mediaMessage));
+            
+            return true;
+
+        } catch (error) {
+            console.error('[StreamServer] ❌ Error sending audio to Ozonetel:', error.message);
+            return false;
+        }
+    }
+
+    /**
+     * Send a control message to Ozonetel
+     * @param {string} ucid - Call ID
+     * @param {string} command - Command type
+     * @param {Object} params - Additional parameters
+     * @returns {boolean} - Success status
+     */
+    sendControlMessage(ucid, command, params = {}) {
+        try {
+            const ws = this.ucidToConnection.get(ucid);
+            
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                console.error('[StreamServer] No active connection for UCID:', ucid);
+                return false;
+            }
+
+            const message = {
+                event: 'control',
+                ucid: ucid,
+                command: command,
+                ...params
+            };
+
+            ws.send(JSON.stringify(message));
+            console.log('[StreamServer] 📤 Control message sent:', command);
+            
+            return true;
+
+        } catch (error) {
+            console.error('[StreamServer] Error sending control message:', error);
+            return false;
+        }
+    }
+
     handleMessage(ws, data, connectionId) {
         try {
             const message = JSON.parse(data.toString());
             
+            // Track UCID to connection mapping for outbound audio
+            if (message.event === 'start' && message.ucid) {
+                this.ucidToConnection.set(message.ucid, ws);
+                ws.currentUcid = message.ucid;
+                console.log('[StreamServer] 📌 Mapped UCID to connection:', message.ucid);
+            }
+            
+            // Clean up mapping on stop
+            if (message.event === 'stop' && message.ucid) {
+                this.ucidToConnection.delete(message.ucid);
+                console.log('[StreamServer] 🗑️  Removed UCID mapping:', message.ucid);
+            }
+            
             // Compact logging - only log important events
             if (message.event === 'start' || message.event === 'stop') {
-                console.log(`[StreamServer] � ${message.event.toUpperCase()} - UCID: ${message.ucid}`);
+                console.log(`[StreamServer] 📡 ${message.event.toUpperCase()} - UCID: ${message.ucid}`);
             } else if (message.event === 'media') {
                 // Only log every 100th media packet to reduce noise
                 if (!this._mediaPacketCount) this._mediaPacketCount = {};

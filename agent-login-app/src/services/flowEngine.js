@@ -1,5 +1,6 @@
 const Response = require('../lib/kookoo/response');
 const openaiService = require('./openaiService');
+const playbackService = require('./playbackService');
 
 /**
  * Simple Flow Execution Engine
@@ -281,6 +282,121 @@ class FlowEngine {
         }
 
         return response.toXML();
+    }
+
+    /**
+     * Execute conversational flow with real-time transcription and playback
+     * @param {string} ucid - Call ID from Ozonetel
+     * @param {string} transcriptionText - Transcribed user speech
+     * @param {Object} options - Flow options { language, voice }
+     * @returns {Promise<boolean>} - Success status
+     */
+    async executeConversationalFlow(ucid, transcriptionText, options = {}) {
+        try {
+            const { language = 'en', voice = 'alloy' } = options;
+            const session = this.getSession(ucid);
+            
+            console.info('[FlowEngine] 🤖 Executing conversational flow', {
+                ucid,
+                userInput: transcriptionText.substring(0, 100),
+                language,
+                voice
+            });
+
+            // Step 1: Detect intent from transcription
+            console.info('[FlowEngine] 🎯 Detecting intent...');
+            const intentResult = await openaiService.detectIntent(
+                transcriptionText,
+                ['greeting', 'help', 'complaint', 'query', 'goodbye', 'unknown']
+            );
+
+            console.info('[FlowEngine] Intent detected:', intentResult);
+            session.context.lastIntent = intentResult.intent;
+            session.context.lastConfidence = intentResult.confidence;
+
+            // Step 2: Generate AI response based on intent and conversation history
+            console.info('[FlowEngine] 💬 Generating AI response...');
+            
+            const systemContext = `You are a helpful AI assistant in a phone call. 
+Keep responses concise and natural for voice interaction (under 50 words).
+Current intent: ${intentResult.intent}
+Confidence: ${intentResult.confidence}
+Language: ${language}`;
+
+            const responseText = await openaiService.generateResponse(
+                transcriptionText,
+                session.conversationHistory,
+                systemContext
+            );
+
+            console.info('[FlowEngine] Response generated:', responseText.substring(0, 100));
+
+            // Step 3: Add to conversation history
+            session.conversationHistory.push(
+                { role: 'user', content: transcriptionText },
+                { role: 'assistant', content: responseText }
+            );
+
+            // Limit history to last 10 messages
+            if (session.conversationHistory.length > 10) {
+                session.conversationHistory = session.conversationHistory.slice(-10);
+            }
+
+            // Step 4: Play response back to caller via TTS
+            console.info('[FlowEngine] 🔊 Playing response to caller...');
+            const playbackSuccess = await playbackService.playText(
+                ucid,
+                responseText,
+                voice,
+                language
+            );
+
+            if (!playbackSuccess) {
+                console.error('[FlowEngine] Failed to play response');
+                return false;
+            }
+
+            console.info('[FlowEngine] ✅ Conversational flow completed successfully');
+            return true;
+
+        } catch (error) {
+            console.error('[FlowEngine] ❌ Conversational flow error:', error);
+            
+            // Try to play error message
+            try {
+                await playbackService.playText(
+                    ucid,
+                    "I'm sorry, I'm having trouble processing your request. Please try again.",
+                    options.voice || 'alloy',
+                    options.language || 'en'
+                );
+            } catch (playbackError) {
+                console.error('[FlowEngine] Failed to play error message:', playbackError);
+            }
+            
+            return false;
+        }
+    }
+
+    /**
+     * Execute simple conversational greeting
+     * @param {string} ucid - Call ID
+     * @param {Object} options - { language, voice }
+     * @returns {Promise<boolean>}
+     */
+    async playGreeting(ucid, options = {}) {
+        const { language = 'en', voice = 'alloy' } = options;
+        
+        const greetings = {
+            en: "Hello! Welcome to AI Agent Portal. I'm listening. How can I help you today?",
+            hi: "नमस्ते! एआई एजेंट पोर्टल में आपका स्वागत है। मैं सुन रहा हूं। आज मैं आपकी कैसे मदद कर सकता हूं?",
+            te: "నమస్కారం! AI ఏజెంట్ పోర్టల్‌కు స్వాగతం. నేను వింటున్నాను. ఈరోజు నేను మీకు ఎలా సహాయం చేయగలను?",
+            ta: "வணக்கம்! AI ஏஜென்ட் போர்டலுக்கு வரவேற்கிறோம். நான் கேட்கிறேன். இன்று நான் உங்களுக்கு எப்படி உதவ முடியும்?"
+        };
+
+        const greeting = greetings[language] || greetings['en'];
+        
+        return await playbackService.playText(ucid, greeting, voice, language);
     }
 }
 
