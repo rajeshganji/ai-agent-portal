@@ -243,9 +243,20 @@ class StreamServer {
     }
 
     getStatus() {
+        const connections = [];
+        this.connections.forEach((ws, connectionId) => {
+            connections.push({
+                id: connectionId,
+                readyState: ws.readyState,
+                readyStateText: ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][ws.readyState],
+                messageCount: ws.messageCount || 0,
+                totalBytesReceived: ws.totalBytesReceived || 0
+            });
+        });
+        
         return {
             activeConnections: this.connections.size,
-            clients: Array.from(this.connections.keys())
+            connections: connections
         };
     }
 }

@@ -92,7 +92,14 @@ const requireAuth = (req, res, next) => {
 wss.on('connection', (ws, req) => {
     console.log('[WebSocket-Agent] New agent connection');
     
+    // Track message statistics
+    ws.messageCount = 0;
+    ws.totalBytesReceived = 0;
+    
     ws.on('message', (message) => {
+        ws.messageCount++;
+        ws.totalBytesReceived += message.length;
+        
         try {
             const data = JSON.parse(message.toString());
             console.log('[WebSocket-Agent] Received message:', data);
@@ -179,6 +186,48 @@ app.use('/ivr-designer', express.static(path.join(__dirname, 'ivr-designer/dist'
 console.log('[Server] Setting up IVR Designer routes');
 const ivrDesignerRoutes = require('./src/routes/ivr-designer');
 app.use('/api/ivr/designer', securityConfig.rateLimiters.general, ivrDesignerRoutes);
+
+// WebSocket Status API - Get connection details
+app.get('/api/ws/status', (req, res) => {
+    try {
+        // This will be populated after streamServer is initialized
+        const streamServerStatus = global.streamServer ? global.streamServer.getStatus() : null;
+        
+        // Agent WebSocket connections (on /agent path)
+        const agentStatus = {
+            activeConnections: agentConnections.size,
+            connections: Array.from(agentConnections.entries()).map(([id, ws]) => ({
+                id,
+                readyState: ws.readyState,
+                readyStateText: ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'][ws.readyState],
+                messageCount: ws.messageCount || 0,
+                totalBytesReceived: ws.totalBytesReceived || 0
+            }))
+        };
+        
+        // Ozonetel WebSocket connections (on /ws path)
+        const ozonetelStatus = streamServerStatus || {
+            activeConnections: 0,
+            clients: []
+        };
+        
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            websockets: {
+                agent: agentStatus,
+                ozonetel: ozonetelStatus,
+                totalConnections: agentStatus.activeConnections + ozonetelStatus.activeConnections
+            }
+        });
+    } catch (error) {
+        console.error('[API] Error getting WebSocket status:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // IVR Designer flow editor route (no auth for hackathon demo)
 app.get('/ivr/designer/flow/:id?', (req, res) => {
@@ -273,6 +322,7 @@ server.listen(PORT, '0.0.0.0', async () => {
     
     // Initialize StreamServer with StreamClient handler
     const streamServer = new StreamServer(server, streamClient);
+    global.streamServer = streamServer; // Store globally for status API
     console.log('[StreamServer] Ready to receive events at: /ws');
     console.log('[StreamServer] StreamClient connected for message processing');
     
