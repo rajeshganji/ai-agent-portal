@@ -41,18 +41,30 @@ class StreamServer {
         const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.connections.set(connectionId, ws);
         console.log(`[StreamServer] Connection ID: ${connectionId}`);
+        console.log(`[StreamServer] Total active connections: ${this.connections.size}`);
 
         ws.on('message', (data) => {
+            console.log(`[StreamServer] ⚡ Message received on connection ${connectionId}`);
+            console.log(`[StreamServer] Data type: ${typeof data}, Length: ${data.length} bytes`);
             this.handleMessage(ws, data, connectionId);
         });
 
         ws.on('close', () => {
-            console.log('[StreamServer] Connection closed:', connectionId);
+            console.log('[StreamServer] 🔌 Connection closed:', connectionId);
+            console.log('[StreamServer] Remaining connections:', this.connections.size - 1);
             this.connections.delete(connectionId);
         });
 
         ws.on('error', (error) => {
-            console.error('[StreamServer] WebSocket error:', error);
+            console.error('[StreamServer] ❌ WebSocket error on', connectionId, ':', error.message);
+        });
+
+        ws.on('ping', () => {
+            console.log('[StreamServer] 💓 Ping received from', connectionId);
+        });
+
+        ws.on('pong', () => {
+            console.log('[StreamServer] 💓 Pong received from', connectionId);
         });
 
         // Send acknowledgment
@@ -65,12 +77,20 @@ class StreamServer {
 
     handleMessage(ws, data, connectionId) {
         try {
+            console.log(`[StreamServer] Processing message from ${connectionId}`);
+            console.log(`[StreamServer] Raw data (first 200 chars):`, data.toString().substring(0, 200));
+            
             const message = JSON.parse(data.toString());
-            console.log('[StreamServer] Received:', message.event || message.type);
+            console.log('[StreamServer] ✅ JSON parsed successfully');
+            console.log('[StreamServer] Message event/type:', message.event || message.type);
+            console.log('[StreamServer] Full message:', JSON.stringify(message, null, 2));
 
             // Forward to StreamClient message handler
             if (this.streamClient) {
+                console.log('[StreamServer] Forwarding to StreamClient...');
                 this.streamClient.handleMessage(data);
+            } else {
+                console.warn('[StreamServer] ⚠️ No StreamClient available to handle message!');
             }
 
             // Handle commands from client
@@ -80,7 +100,9 @@ class StreamServer {
             }
 
         } catch (err) {
-            console.error('[StreamServer] Error processing message:', err);
+            console.error('[StreamServer] ❌ Error processing message:', err.message);
+            console.error('[StreamServer] Raw data that failed:', data.toString().substring(0, 500));
+            console.error('[StreamServer] Error stack:', err.stack);
         }
     }
 
