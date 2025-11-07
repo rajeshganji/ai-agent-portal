@@ -40,8 +40,10 @@ class StreamServer {
                     
                     // Accept all connections - Ozonetel verified
                     console.log('[StreamServer] ✅ ACCEPTING CONNECTION - All checks passed');
+                    console.log('[StreamServer] Calling callback(true) to accept connection...');
                     console.log('======================================================\n');
                     callback(true);
+                    console.log('[StreamServer] 📞 Callback executed, waiting for connection event...');
                 } catch (error) {
                     console.error('[StreamServer] ❌ REJECTING - Error during verification:', error.message);
                     console.error('[StreamServer] Error stack:', error.stack);
@@ -52,7 +54,16 @@ class StreamServer {
         });
 
         this.wss.on('connection', (ws, req) => {
+            console.log('[StreamServer] 🎯 CONNECTION EVENT FIRED - Starting handleConnection...');
             this.handleConnection(ws, req);
+        });
+        
+        this.wss.on('error', (error) => {
+            console.error('[StreamServer] ❌ WebSocket Server Error:', error);
+        });
+        
+        this.wss.on('listening', () => {
+            console.log('[StreamServer] ✅ WebSocket server is listening');
         });
 
         console.log('[StreamServer] WebSocket stream server ready at path: /ws');
@@ -60,6 +71,7 @@ class StreamServer {
     }
 
     handleConnection(ws, req) {
+        console.log('[StreamServer] 🔵 handleConnection() called');
         const clientIp = req.socket.remoteAddress;
         const protocol = req.connection.encrypted ? 'wss' : 'ws';
         
