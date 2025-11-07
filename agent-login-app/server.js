@@ -162,6 +162,11 @@ console.log('[Server] Setting up stream routes');
 const streamModule = require('./src/routes/stream.js');
 app.use('/api/stream', securityConfig.rateLimiters.general, streamModule.router);
 
+// IVR Designer routes (for hackathon demo)
+console.log('[Server] Setting up IVR Designer routes');
+const ivrDesignerRoutes = require('./src/routes/ivr-designer');
+app.use('/api/ivr/designer', securityConfig.rateLimiters.general, ivrDesignerRoutes);
+
 // Main routes
 app.get('/', (req, res) => {
     res.render('login', { error: null });
