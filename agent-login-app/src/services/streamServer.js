@@ -7,35 +7,46 @@ const WebSocket = require('ws');
 
 class StreamServer {
     constructor(server, streamClient) {
+        console.log('[StreamServer] 🚀 CONSTRUCTOR CALLED - Initializing...');
         this.streamClient = streamClient;
         this.connections = new Map();
         this.server = server;
         
-        // Create WebSocket server exactly like /agent - simple approach
+        console.log('[StreamServer] Creating WebSocket.Server with noServer mode');
+        
+        // Create WebSocket server in noServer mode - handle upgrades manually
         this.wss = new WebSocket.Server({ 
-            server,
-            path: '/ws',
-            maxPayload: 100 * 1024 * 1024, // 100MB max message size
-            perMessageDeflate: {
-                zlibDeflateOptions: {
-                    chunkSize: 1024,
-                    memLevel: 7,
-                    level: 3
-                },
-                zlibInflateOptions: {
-                    chunkSize: 10 * 1024
-                },
-                clientNoContextTakeover: true,
-                serverNoContextTakeover: true,
-                serverMaxWindowBits: 10,
-                concurrencyLimit: 10,
-                threshold: 1024
+            noServer: true
+        });
+        
+        console.log('[StreamServer] WebSocket.Server created in noServer mode');
+        console.log('[StreamServer] Setting up manual upgrade handler on HTTP server...');
+        
+        // Manually handle upgrade requests BEFORE Express middleware
+        this.server.on('upgrade', (request, socket, head) => {
+            console.log('[StreamServer] 📡 UPGRADE EVENT RECEIVED!');
+            console.log('[StreamServer] Request URL:', request.url);
+            console.log('[StreamServer] Request headers:', request.headers);
+            
+            // Only handle /ws path
+            if (request.url !== '/ws') {
+                console.log('[StreamServer] ❌ Destroying socket - not /ws path:', request.url);
+                socket.destroy();
+                return;
             }
+            
+            console.log('[StreamServer] ✅ Handling upgrade for /ws');
+            
+            this.wss.handleUpgrade(request, socket, head, (ws) => {
+                console.log('[StreamServer] 🎯 handleUpgrade callback - emitting connection');
+                this.wss.emit('connection', ws, request);
+            });
         });
         
         // Handle connection events
         this.wss.on('connection', (ws, req) => {
-            console.log('[StreamServer] 🎯 CONNECTION EVENT FIRED - Starting handleConnection...');
+            console.log('[StreamServer] 🎯 CONNECTION EVENT FIRED!');
+            console.log('[StreamServer] Request URL:', req.url);
             this.handleConnection(ws, req);
         });
         
@@ -43,8 +54,7 @@ class StreamServer {
             console.error('[StreamServer] ❌ WebSocket Server Error:', error);
         });
 
-        console.log('[StreamServer] WebSocket stream server ready at path: /ws');
-        console.log('[StreamServer] Supports both ws:// (HTTP) and wss:// (HTTPS) connections');
+        console.log('[StreamServer] ✅ WebSocket stream server ready with manual upgrade handling for /ws');
     }
 
     handleConnection(ws, req) {

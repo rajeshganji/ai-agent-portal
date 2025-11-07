@@ -186,6 +186,23 @@ app.use('/ivr-designer', express.static(path.join(__dirname, 'ivr-designer/dist'
     }
 }));
 
+// CRITICAL: Handle /ws route for WebSocket upgrade
+// This prevents Express from returning 404/400 during upgrade handshake
+app.get('/ws', (req, res, next) => {
+    console.log('[Server] /ws route hit - checking for WebSocket upgrade');
+    console.log('[Server] Headers:', req.headers);
+    
+    if (req.headers.upgrade && req.headers.upgrade.toLowerCase() === 'websocket') {
+        console.log('[Server] ✅ WebSocket upgrade request detected - allowing through');
+        // Don't send a response - let the upgrade handler take over
+        // The 'upgrade' event on server will handle this
+        return;
+    }
+    
+    console.log('[Server] ❌ Not a WebSocket upgrade request');
+    res.status(400).send('WebSocket upgrades only');
+});
+
 // IVR Designer routes (for hackathon demo)
 console.log('[Server] Setting up IVR Designer routes');
 const ivrDesignerRoutes = require('./src/routes/ivr-designer');
