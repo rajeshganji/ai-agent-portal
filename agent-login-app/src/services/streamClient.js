@@ -297,8 +297,16 @@ class StreamClient {
             
             // Send to OpenAI Whisper API
             const startTime = Date.now();
-            const { text, language } = await openaiService.speechToText(wavBuffer, languageHint);
+            const result = await openaiService.speechToText(wavBuffer, languageHint);
             const transcriptionTime = Date.now() - startTime;
+            
+            // Check if result is valid
+            if (!result || !result.text) {
+                console.warn('[StreamClient] ⚠️  No transcription result returned');
+                return;
+            }
+            
+            const { text, language } = result;
             
             console.log('[StreamClient] 📝 Transcription received in', transcriptionTime, 'ms');
             console.log('[StreamClient] Language hint:', languageHint, '→ Detected:', language);
@@ -312,8 +320,8 @@ class StreamClient {
             // Store transcription chunk
             session.chunks.push({
                 timestamp: Date.now(),
-                text,
-                language,
+                text: text || '',
+                language: language || languageHint,
                 durationMs: processorInfo.durationMs,
                 transcriptionTimeMs: transcriptionTime
             });
@@ -334,16 +342,22 @@ class StreamClient {
             
         } catch (error) {
             console.error('[StreamClient] ❌ Transcription error:', error.message);
-            session.errors++;
+            
+            // Safely increment errors if session exists
+            if (session) {
+                session.errors++;
+            }
             
             await this.logEvent('transcription_error', {
                 ucid,
                 error: error.message,
-                chunkNumber: session.totalChunks + 1
+                chunkNumber: session ? session.totalChunks + 1 : 0
             });
             
             // Reset processor anyway to continue
-            processor.reset();
+            if (processor) {
+                processor.reset();
+            }
         }
     }
 
