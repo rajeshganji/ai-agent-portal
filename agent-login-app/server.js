@@ -162,13 +162,23 @@ console.log('[Server] Setting up stream routes');
 const streamModule = require('./src/routes/stream.js');
 app.use('/api/stream', securityConfig.rateLimiters.general, streamModule.router);
 
+// Serve IVR Designer static assets FIRST (before API routes)
+console.log('[Server] Setting up IVR Designer static files');
+app.use('/ivr-designer', express.static(path.join(__dirname, 'ivr-designer/dist'), {
+    setHeaders: (res, filepath) => {
+        // Ensure correct MIME types for assets
+        if (filepath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (filepath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        }
+    }
+}));
+
 // IVR Designer routes (for hackathon demo)
 console.log('[Server] Setting up IVR Designer routes');
 const ivrDesignerRoutes = require('./src/routes/ivr-designer');
 app.use('/api/ivr/designer', securityConfig.rateLimiters.general, ivrDesignerRoutes);
-
-// Serve IVR Designer UI (built React app)
-app.use('/ivr-designer', express.static(path.join(__dirname, 'ivr-designer/dist')));
 
 // IVR Designer flow editor route (no auth for hackathon demo)
 app.get('/ivr/designer/flow/:id?', (req, res) => {
