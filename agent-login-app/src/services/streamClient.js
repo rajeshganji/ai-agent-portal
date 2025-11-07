@@ -58,6 +58,21 @@ class StreamClient {
     }
 
     /**
+     * Set language preference for a call's transcription
+     * @param {string} ucid - Call identifier
+     * @param {string} language - Language code: 'en', 'hi', 'te', 'ta', 'kn', 'ml', 'auto'
+     */
+    setLanguage(ucid, language) {
+        const session = this.transcriptionSessions.get(ucid);
+        if (session) {
+            session.language = language;
+            console.log(`[StreamClient] 🌐 Language set to '${language}' for UCID: ${ucid}`);
+        } else {
+            console.warn(`[StreamClient] No transcription session found for UCID: ${ucid}`);
+        }
+    }
+
+    /**
      * Connect to WebSocket server
      */
     connect() {
@@ -165,7 +180,8 @@ class StreamClient {
                 chunks: [],
                 finalTranscription: '',
                 totalChunks: 0,
-                errors: 0
+                errors: 0,
+                language: 'auto' // Can be set via API: 'en', 'hi', 'te', 'ta', etc.
             });
             
             console.log('[StreamClient] ✅ Transcription session created for', ucid);
@@ -276,14 +292,22 @@ class StreamClient {
             console.log('[StreamClient] 📤 Sending audio chunk to OpenAI Whisper');
             console.log('[StreamClient] Chunk info:', processorInfo);
             
+            // Get language preference from session
+            const languageHint = session.language || 'auto';
+            
             // Send to OpenAI Whisper API
             const startTime = Date.now();
-            const { text, language } = await openaiService.speechToText(wavBuffer, 'auto');
+            const { text, language } = await openaiService.speechToText(wavBuffer, languageHint);
             const transcriptionTime = Date.now() - startTime;
             
             console.log('[StreamClient] 📝 Transcription received in', transcriptionTime, 'ms');
+            console.log('[StreamClient] Language hint:', languageHint, '→ Detected:', language);
             console.log('[StreamClient] Text:', text);
-            console.log('[StreamClient] Language:', language);
+            
+            // Warn if language detection seems incorrect
+            if (languageHint !== 'auto' && language !== languageHint) {
+                console.warn('[StreamClient] ⚠️  Language mismatch! Requested:', languageHint, 'Detected:', language);
+            }
             
             // Store transcription chunk
             session.chunks.push({
@@ -382,15 +406,17 @@ class StreamClient {
                 await this.transcribeAudioChunk(ucid);
             }
 
-            // Combine all transcription chunks
-            const finalText = session.chunks
-                .map(chunk => chunk.text.trim())
+            // Combine all transcription chunks (with safety checks)
+            const chunks = session.chunks || [];
+            const finalText = chunks
+                .map(chunk => chunk.text?.trim() || '')
                 .filter(text => text.length > 0) // Remove empty
                 .join(' ')
                 .replace(/\s+/g, ' ') // Normalize spaces
                 .trim();
             
             const totalDuration = Date.now() - session.startTime;
+            const totalAudioMs = chunks.reduce((sum, c) => sum + (c.durationMs || 0), 0);
             
             // Print final transcription
             console.log('═'.repeat(80));
@@ -399,7 +425,7 @@ class StreamClient {
             console.log('[StreamClient] UCID:', ucid);
             console.log('[StreamClient] Total Duration:', (totalDuration / 1000).toFixed(2), 'seconds');
             console.log('[StreamClient] Total Chunks:', session.totalChunks);
-            console.log('[StreamClient] Total Audio Processed:', session.chunks.reduce((sum, c) => sum + c.durationMs, 0), 'ms');
+            console.log('[StreamClient] Total Audio Processed:', totalAudioMs, 'ms');
             console.log('[StreamClient] Errors:', session.errors);
             console.log('[StreamClient] ──────────────────────────────────────────');
             console.log('[StreamClient] FULL TRANSCRIPTION:');
@@ -408,8 +434,8 @@ class StreamClient {
             console.log('[StreamClient]');
             console.log('[StreamClient] ──────────────────────────────────────────');
             
-            // Show unique phrases (deduplicated)
-            const uniquePhrases = [...new Set(session.chunks.map(c => c.text.trim()))];
+            // Show unique phrases (deduplicated) - with safety checks
+            const uniquePhrases = [...new Set(chunks.map(c => c.text?.trim() || '').filter(t => t.length > 0))];
             if (uniquePhrases.length > 0 && uniquePhrases.length < session.totalChunks) {
                 console.log('[StreamClient] Unique phrases detected (', uniquePhrases.length, 'distinct):');
                 uniquePhrases.forEach((phrase, index) => {
