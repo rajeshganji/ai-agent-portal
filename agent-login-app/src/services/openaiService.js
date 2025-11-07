@@ -23,7 +23,7 @@ class OpenAIService {
 
     /**
      * Convert speech audio to text using Whisper
-     * @param {Buffer} audioBuffer - Audio file buffer (wav, mp3, etc.)
+     * @param {Buffer} audioBuffer - Audio file buffer (WAV, MP3, etc.)
      * @param {string} language - Language code (e.g., 'en', 'hi', 'auto' for detection)
      * @returns {Promise<{text: string, language: string}>}
      */
@@ -33,25 +33,31 @@ class OpenAIService {
         }
 
         try {
-            logger.info('[OpenAI] Converting speech to text...', { language });
+            const startTime = Date.now();
+            console.log('[OpenAI] Converting speech to text...', { 
+                bufferSize: audioBuffer.length,
+                language 
+            });
             
-            // Create temporary file for audio (Whisper API requires file)
-            const tempFile = path.join('/tmp', `audio_${Date.now()}.wav`);
-            fs.writeFileSync(tempFile, audioBuffer);
+            // Create a blob from the buffer for FormData
+            const blob = new Blob([audioBuffer], { type: 'audio/wav' });
+            
+            // Create file object from blob
+            const file = new File([blob], 'audio.wav', { type: 'audio/wav' });
             
             const transcription = await this.client.audio.transcriptions.create({
-                file: fs.createReadStream(tempFile),
+                file: file,
                 model: 'whisper-1',
                 language: language === 'auto' ? undefined : language,
                 response_format: 'verbose_json'
             });
             
-            // Clean up temp file
-            fs.unlinkSync(tempFile);
+            const duration = Date.now() - startTime;
             
-            logger.info('[OpenAI] Speech-to-text completed', { 
+            console.log('[OpenAI] Speech-to-text completed in', duration, 'ms', { 
                 text: transcription.text,
-                detectedLanguage: transcription.language 
+                detectedLanguage: transcription.language,
+                textLength: transcription.text.length
             });
             
             return {
@@ -59,7 +65,8 @@ class OpenAIService {
                 language: transcription.language || language
             };
         } catch (error) {
-            logger.error('[OpenAI] Speech-to-text error:', error);
+            console.error('[OpenAI] Speech-to-text error:', error.message);
+            console.error('[OpenAI] Error details:', error.response?.data || error);
             throw error;
         }
     }

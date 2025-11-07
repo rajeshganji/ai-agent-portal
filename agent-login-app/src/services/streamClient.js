@@ -1,11 +1,13 @@
 /**
  * WebSocket Stream Client for KooKoo Bi-directional Audio Streaming
- * Handles PCM linear 16-bit 8kHz audio data
+ * Handles PCM linear 16-bit 8kHz audio data with real-time transcription
  */
 
 const WebSocket = require('ws');
 const fs = require('fs').promises;
 const path = require('path');
+const AudioProcessor = require('./audioProcessor');
+const openaiService = require('./openaiService');
 
 class StreamClient {
     constructor(config = {}) {
@@ -22,10 +24,15 @@ class StreamClient {
         this.currentCall = null;
         this.audioBuffers = new Map(); // Store audio buffers per call
         
+        // Real-time transcription support
+        this.audioProcessors = new Map(); // AudioProcessor per call
+        this.transcriptionSessions = new Map(); // Transcription results per call
+        
         console.log('[StreamClient] Initialized with config:', {
             url: this.config.url,
             reconnectInterval: this.config.reconnectInterval,
-            logDir: this.config.logDir
+            logDir: this.config.logDir,
+            openAIEnabled: openaiService.enabled
         });
     }
 
@@ -139,6 +146,32 @@ class StreamClient {
 
         // Initialize audio buffer for this call
         this.audioBuffers.set(ucid, []);
+        
+        // Initialize real-time transcription
+        if (openaiService.enabled) {
+            console.log('[StreamClient] 🎙️  Initializing real-time transcription for', ucid);
+            
+            // Create audio processor
+            this.audioProcessors.set(ucid, new AudioProcessor(ucid, {
+                minAudioDuration: 1000,   // 1 second minimum
+                maxAudioDuration: 5000,   // 5 seconds maximum
+                silenceThreshold: 1000,   // 1 second silence
+                silenceAmplitude: 100     // Amplitude threshold
+            }));
+            
+            // Create transcription session
+            this.transcriptionSessions.set(ucid, {
+                startTime: Date.now(),
+                chunks: [],
+                finalTranscription: '',
+                totalChunks: 0,
+                errors: 0
+            });
+            
+            console.log('[StreamClient] ✅ Transcription session created for', ucid);
+        } else {
+            console.log('[StreamClient] ⚠️  OpenAI not enabled - transcription disabled');
+        }
 
         // Log start event
         await this.logEvent('start', message);
@@ -177,7 +210,7 @@ class StreamClient {
                 console.log('[StreamClient] 🎵 Media packets received:', this.currentCall.mediaPackets);
             }
 
-            // Store audio samples
+            // Store audio samples (existing buffering)
             const buffer = this.audioBuffers.get(ucid);
             if (buffer) {
                 buffer.push({
@@ -190,6 +223,18 @@ class StreamClient {
                     type
                 });
             }
+            
+            // Real-time transcription processing
+            const processor = this.audioProcessors.get(ucid);
+            if (processor && openaiService.enabled) {
+                // Add samples to audio processor
+                processor.addSamples(samples, sampleRate);
+                
+                // Check if we should send to OpenAI
+                if (processor.shouldSendToAPI()) {
+                    await this.transcribeAudioChunk(ucid);
+                }
+            }
 
             // Log every 100th packet
             if (this.currentCall.mediaPackets % 100 === 0) {
@@ -198,10 +243,83 @@ class StreamClient {
                     packetNumber: this.currentCall.mediaPackets,
                     sampleRate,
                     numberOfFrames,
+                    channelCount,
                     samplesCount: samples.length,
                     samplePreview: samples.slice(0, 10) // First 10 samples
                 });
             }
+        }
+    }
+
+    /**
+     * Transcribe accumulated audio chunk using OpenAI Whisper
+     */
+    async transcribeAudioChunk(ucid) {
+        const processor = this.audioProcessors.get(ucid);
+        const session = this.transcriptionSessions.get(ucid);
+        
+        if (!processor || !session) {
+            console.warn('[StreamClient] No processor or session for', ucid);
+            return;
+        }
+
+        try {
+            // Convert to WAV
+            const wavBuffer = processor.toWAVBuffer();
+            
+            if (!wavBuffer) {
+                console.warn('[StreamClient] No WAV buffer generated for', ucid);
+                return;
+            }
+
+            const processorInfo = processor.getInfo();
+            console.log('[StreamClient] 📤 Sending audio chunk to OpenAI Whisper');
+            console.log('[StreamClient] Chunk info:', processorInfo);
+            
+            // Send to OpenAI Whisper API
+            const startTime = Date.now();
+            const { text, language } = await openaiService.speechToText(wavBuffer, 'auto');
+            const transcriptionTime = Date.now() - startTime;
+            
+            console.log('[StreamClient] 📝 Transcription received in', transcriptionTime, 'ms');
+            console.log('[StreamClient] Text:', text);
+            console.log('[StreamClient] Language:', language);
+            
+            // Store transcription chunk
+            session.chunks.push({
+                timestamp: Date.now(),
+                text,
+                language,
+                durationMs: processorInfo.durationMs,
+                transcriptionTimeMs: transcriptionTime
+            });
+            session.totalChunks++;
+            
+            // Log transcription
+            await this.logEvent('transcription_chunk', {
+                ucid,
+                chunkNumber: session.totalChunks,
+                text,
+                language,
+                audioDurationMs: processorInfo.durationMs,
+                transcriptionTimeMs: transcriptionTime
+            });
+            
+            // Reset processor for next chunk
+            processor.reset();
+            
+        } catch (error) {
+            console.error('[StreamClient] ❌ Transcription error:', error.message);
+            session.errors++;
+            
+            await this.logEvent('transcription_error', {
+                ucid,
+                error: error.message,
+                chunkNumber: session.totalChunks + 1
+            });
+            
+            // Reset processor anyway to continue
+            processor.reset();
         }
     }
 
@@ -224,6 +342,11 @@ class StreamClient {
             };
 
             console.log('[StreamClient] Call Summary:', callSummary);
+            
+            // Finalize transcription if enabled
+            if (openaiService.enabled && this.audioProcessors.has(ucid)) {
+                await this.finalizeTranscription(ucid);
+            }
 
             // Save audio buffer to file
             await this.saveAudioBuffer(ucid);
@@ -234,6 +357,83 @@ class StreamClient {
             // Cleanup
             this.audioBuffers.delete(ucid);
             this.currentCall = null;
+        }
+    }
+
+    /**
+     * Finalize transcription - send any remaining audio and combine results
+     */
+    async finalizeTranscription(ucid) {
+        try {
+            console.log('[StreamClient] 🎯 Finalizing transcription for', ucid);
+            
+            const processor = this.audioProcessors.get(ucid);
+            const session = this.transcriptionSessions.get(ucid);
+            
+            if (!processor || !session) {
+                console.warn('[StreamClient] No processor or session to finalize for', ucid);
+                return;
+            }
+
+            // Send any remaining audio
+            const processorInfo = processor.getInfo();
+            if (processorInfo.totalSamples > 0) {
+                console.log('[StreamClient] Sending remaining audio:', processorInfo);
+                await this.transcribeAudioChunk(ucid);
+            }
+
+            // Combine all transcription chunks
+            const finalText = session.chunks.map(chunk => chunk.text).join(' ').trim();
+            const totalDuration = Date.now() - session.startTime;
+            
+            // Print final transcription
+            console.log('═'.repeat(80));
+            console.log('[StreamClient] 🎙️  FINAL TRANSCRIPTION COMPLETE');
+            console.log('═'.repeat(80));
+            console.log('[StreamClient] UCID:', ucid);
+            console.log('[StreamClient] Total Duration:', (totalDuration / 1000).toFixed(2), 'seconds');
+            console.log('[StreamClient] Total Chunks:', session.totalChunks);
+            console.log('[StreamClient] Errors:', session.errors);
+            console.log('[StreamClient] ──────────────────────────────────────────');
+            console.log('[StreamClient] TRANSCRIPTION:');
+            console.log('[StreamClient]', finalText || '(No speech detected)');
+            console.log('[StreamClient] ──────────────────────────────────────────');
+            
+            // Log individual chunks
+            if (session.chunks.length > 0) {
+                console.log('[StreamClient] Chunks breakdown:');
+                session.chunks.forEach((chunk, index) => {
+                    console.log(`[StreamClient]   ${index + 1}. [${(chunk.durationMs / 1000).toFixed(1)}s] "${chunk.text}"`);
+                });
+            }
+            console.log('═'.repeat(80));
+            
+            // Save final transcription
+            session.finalTranscription = finalText;
+            
+            // Log final result
+            await this.logEvent('transcription_final', {
+                ucid,
+                finalText,
+                totalChunks: session.totalChunks,
+                totalDurationMs: totalDuration,
+                errors: session.errors,
+                chunks: session.chunks.map(c => ({
+                    text: c.text,
+                    language: c.language,
+                    durationMs: c.durationMs
+                }))
+            });
+            
+            // Cleanup
+            processor.destroy();
+            this.audioProcessors.delete(ucid);
+            this.transcriptionSessions.delete(ucid);
+            
+            console.log('[StreamClient] ✅ Transcription session cleaned up for', ucid);
+            
+        } catch (error) {
+            console.error('[StreamClient] ❌ Error finalizing transcription:', error);
         }
     }
 
