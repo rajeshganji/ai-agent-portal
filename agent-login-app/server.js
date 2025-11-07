@@ -285,8 +285,10 @@ let streamServer = null;
 // Export streamClient getter for routes
 const getStreamClient = () => streamClient;
 
-// Initialize StreamClient and StreamServer BEFORE server.listen()
-(async () => {
+// Note: Upgrade handling is now done by StreamServer for /ws path
+// The /agent WebSocket server handles its own upgrades
+
+async function startServer() {
     console.log('=================================');
     console.log('🎤 Initializing Stream Client...');
     console.log('=================================');
@@ -310,12 +312,8 @@ const getStreamClient = () => streamClient;
     global.streamServer = streamServer; // Store globally for status API
     console.log('[StreamServer] Ready to receive events at: /ws');
     console.log('[StreamServer] StreamClient connected for message processing');
-})();
 
-// Note: Upgrade handling is now done by StreamServer for /ws path
-// The /agent WebSocket server handles its own upgrades
-
-server.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ [Server] Running at http://0.0.0.0:${PORT}`);
     console.log(`✅ [WebSocket-Agent] Agent connections at ws://0.0.0.0:${PORT}/agent`);
     console.log(`✅ [WebSocket-Stream] Ozonetel streaming at ws://0.0.0.0:${PORT}/ws`);
@@ -333,6 +331,13 @@ server.listen(PORT, '0.0.0.0', async () => {
     
     // Set stream client getter for routes
     streamModule.setStreamClientGetter(getStreamClient);
+});
+}
+
+// Start the server
+startServer().catch(err => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
 });
 
 // Handle server errors
