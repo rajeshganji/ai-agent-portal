@@ -9,41 +9,28 @@ class StreamServer {
     constructor(server, streamClient) {
         this.streamClient = streamClient;
         this.connections = new Map();
+        this.server = server;
         
-        // Create WebSocket server on /ws path
-        // Automatically supports both ws:// and wss:// based on the underlying server
+        // Create WebSocket server without path (we'll handle upgrade manually)
         this.wss = new WebSocket.Server({ 
-            server,
-            path: '/ws',
+            noServer: true,  // Handle upgrade manually
             maxPayload: 100 * 1024 * 1024, // 100MB max message size (increased for audio data)
             perMessageDeflate: false, // Disable compression for better performance with audio
-            verifyClient: (info, callback) => {
-                const protocol = info.secure ? 'wss' : 'ws';
-                console.log('\n========== NEW WEBSOCKET CONNECTION ATTEMPT ==========');
-                console.log(`[StreamServer] Protocol: ${protocol}://`);
-                console.log(`[StreamServer] Origin: ${info.origin || 'NOT PROVIDED'}`);
-                console.log(`[StreamServer] URL: ${info.req.url}`);
-                console.log(`[StreamServer] Remote Address: ${info.req.socket.remoteAddress}`);
-                console.log(`[StreamServer] Remote Port: ${info.req.socket.remotePort}`);
-                console.log(`[StreamServer] User-Agent: ${info.req.headers['user-agent'] || 'NOT PROVIDED'}`);
-                console.log(`[StreamServer] All Headers:`, JSON.stringify(info.req.headers, null, 2));
-                
-                // Accept all connections - path is already filtered by WebSocket.Server
-                try {
-                    console.log('[StreamServer] ✅ ACCEPTING CONNECTION - All checks passed');
-                    console.log('[StreamServer] Calling callback(true) to accept connection...');
-                    console.log('======================================================\n');
-                    callback(true);
-                    console.log('[StreamServer] 📞 Callback executed, waiting for connection event...');
-                } catch (error) {
-                    console.error('[StreamServer] ❌ REJECTING - Error during verification:', error.message);
-                    console.error('[StreamServer] Error stack:', error.stack);
-                    console.log('======================================================\n');
-                    callback(false, 500, 'Internal Server Error');
-                }
-            }
         });
-
+        
+        // Handle upgrade requests for /ws path
+        server.on('upgrade', (request, socket, head) => {
+            const pathname = request.url;
+            console.log(`[StreamServer] 🔄 Upgrade request for path: ${pathname}`);
+            
+            if (pathname === '/ws' || pathname.startsWith('/ws?')) {
+                console.log('[StreamServer] ✅ Handling /ws upgrade...');
+                this.handleUpgrade(request, socket, head);
+            }
+            // Other paths handled by other WebSocket servers (e.g., /agent)
+        });
+        
+        // Handle connection events
         this.wss.on('connection', (ws, req) => {
             console.log('[StreamServer] 🎯 CONNECTION EVENT FIRED - Starting handleConnection...');
             this.handleConnection(ws, req);
@@ -52,13 +39,38 @@ class StreamServer {
         this.wss.on('error', (error) => {
             console.error('[StreamServer] ❌ WebSocket Server Error:', error);
         });
-        
-        this.wss.on('listening', () => {
-            console.log('[StreamServer] ✅ WebSocket server is listening');
-        });
 
         console.log('[StreamServer] WebSocket stream server ready at path: /ws');
         console.log('[StreamServer] Supports both ws:// (HTTP) and wss:// (HTTPS) connections');
+    }
+    
+    handleUpgrade(request, socket, head) {
+        const protocol = socket.encrypted ? 'wss' : 'ws';
+        console.log('\n========== NEW WEBSOCKET CONNECTION ATTEMPT ==========');
+        console.log(`[StreamServer] Protocol: ${protocol}://`);
+        console.log(`[StreamServer] Origin: ${request.headers.origin || 'NOT PROVIDED'}`);
+        console.log(`[StreamServer] URL: ${request.url}`);
+        console.log(`[StreamServer] Remote Address: ${socket.remoteAddress}`);
+        console.log(`[StreamServer] Remote Port: ${socket.remotePort}`);
+        console.log(`[StreamServer] User-Agent: ${request.headers['user-agent'] || 'NOT PROVIDED'}`);
+        console.log(`[StreamServer] All Headers:`, JSON.stringify(request.headers, null, 2));
+        
+        // Accept all connections - path is already filtered
+        try {
+            console.log('[StreamServer] ✅ ACCEPTING CONNECTION - All checks passed');
+            console.log('[StreamServer] Calling wss.handleUpgrade()...');
+            console.log('======================================================\n');
+            
+            this.wss.handleUpgrade(request, socket, head, (ws) => {
+                console.log('[StreamServer] 📞 handleUpgrade callback executed');
+                this.wss.emit('connection', ws, request);
+            });
+        } catch (error) {
+            console.error('[StreamServer] ❌ Error during upgrade:', error.message);
+            console.error('[StreamServer] Error stack:', error.stack);
+            console.log('======================================================\n');
+            socket.destroy();
+        }
     }
 
     handleConnection(ws, req) {
