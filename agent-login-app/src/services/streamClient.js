@@ -8,6 +8,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const AudioProcessor = require('./audioProcessor');
 const openaiService = require('./openaiService');
+const flowEngine = require('./flowEngine');
 
 class StreamClient {
     constructor(config = {}) {
@@ -136,7 +137,8 @@ class StreamClient {
                     await this.logEvent('unknown', message);
             }
         } catch (err) {
-            console.error('[StreamClient] Error processing message:', err);
+            console.error('[StreamClient] ❌ Error processing message:', err.message);
+            console.error('[StreamClient] Error stack:', err.stack);
             console.error('[StreamClient] Raw data:', data.toString());
         }
     }
@@ -486,11 +488,22 @@ class StreamClient {
                 }))
             });
             
+            // Trigger conversational flow (generate AI response + playback)
+            try {
+                console.log('[StreamClient] ▶️  Triggering FlowEngine for playback', { ucid, finalTextSnippet: finalText.substring(0, 120) });
+                const flowStartTs = Date.now();
+                const flowResult = await flowEngine.executeConversationalFlow(ucid, finalText, { language: session.language });
+                const flowElapsed = Date.now() - flowStartTs;
+                console.log('[StreamClient] ▶️  FlowEngine result:', { ucid, flowResult, elapsedMs: flowElapsed });
+            } catch (flowErr) {
+                console.error('[StreamClient] ❌ Error running FlowEngine after transcription:', flowErr);
+            }
+
             // Cleanup
             processor.destroy();
             this.audioProcessors.delete(ucid);
             this.transcriptionSessions.delete(ucid);
-            
+
             console.log('[StreamClient] ✅ Transcription session cleaned up for', ucid);
             
         } catch (error) {
