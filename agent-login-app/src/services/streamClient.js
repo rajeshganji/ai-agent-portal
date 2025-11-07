@@ -174,17 +174,19 @@ class StreamClient {
                 silenceAmplitude: 200     // Higher threshold (was 100)
             }));
             
-            // Create transcription session
+            // Create transcription session with default language from env or 'auto'
+            const defaultLanguage = process.env.DEFAULT_TRANSCRIPTION_LANGUAGE || 'te'; // Default to Telugu
+            
             this.transcriptionSessions.set(ucid, {
                 startTime: Date.now(),
                 chunks: [],
                 finalTranscription: '',
                 totalChunks: 0,
                 errors: 0,
-                language: 'auto' // Can be set via API: 'en', 'hi', 'te', 'ta', etc.
+                language: defaultLanguage // Can be changed via setLanguage() API
             });
             
-            console.log('[StreamClient] ✅ Transcription session created for', ucid);
+            console.log('[StreamClient] ✅ Transcription session created for', ucid, '- Language:', defaultLanguage);
         } else {
             console.log('[StreamClient] ⚠️  OpenAI not enabled - transcription disabled');
         }
