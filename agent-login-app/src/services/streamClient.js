@@ -151,12 +151,12 @@ class StreamClient {
         if (openaiService.enabled) {
             console.log('[StreamClient] 🎙️  Initializing real-time transcription for', ucid);
             
-            // Create audio processor
+            // Create audio processor with LESS AGGRESSIVE chunking
             this.audioProcessors.set(ucid, new AudioProcessor(ucid, {
-                minAudioDuration: 1000,   // 1 second minimum
-                maxAudioDuration: 5000,   // 5 seconds maximum
-                silenceThreshold: 1000,   // 1 second silence
-                silenceAmplitude: 100     // Amplitude threshold
+                minAudioDuration: 3000,   // 3 seconds minimum (was 1000)
+                maxAudioDuration: 8000,   // 8 seconds maximum (was 5000)
+                silenceThreshold: 2000,   // 2 seconds silence (was 1000)
+                silenceAmplitude: 200     // Higher threshold (was 100)
             }));
             
             // Create transcription session
@@ -383,7 +383,13 @@ class StreamClient {
             }
 
             // Combine all transcription chunks
-            const finalText = session.chunks.map(chunk => chunk.text).join(' ').trim();
+            const finalText = session.chunks
+                .map(chunk => chunk.text.trim())
+                .filter(text => text.length > 0) // Remove empty
+                .join(' ')
+                .replace(/\s+/g, ' ') // Normalize spaces
+                .trim();
+            
             const totalDuration = Date.now() - session.startTime;
             
             // Print final transcription
@@ -393,18 +399,25 @@ class StreamClient {
             console.log('[StreamClient] UCID:', ucid);
             console.log('[StreamClient] Total Duration:', (totalDuration / 1000).toFixed(2), 'seconds');
             console.log('[StreamClient] Total Chunks:', session.totalChunks);
+            console.log('[StreamClient] Total Audio Processed:', session.chunks.reduce((sum, c) => sum + c.durationMs, 0), 'ms');
             console.log('[StreamClient] Errors:', session.errors);
             console.log('[StreamClient] ──────────────────────────────────────────');
-            console.log('[StreamClient] TRANSCRIPTION:');
+            console.log('[StreamClient] FULL TRANSCRIPTION:');
+            console.log('[StreamClient]');
             console.log('[StreamClient]', finalText || '(No speech detected)');
+            console.log('[StreamClient]');
             console.log('[StreamClient] ──────────────────────────────────────────');
             
-            // Log individual chunks
-            if (session.chunks.length > 0) {
-                console.log('[StreamClient] Chunks breakdown:');
-                session.chunks.forEach((chunk, index) => {
-                    console.log(`[StreamClient]   ${index + 1}. [${(chunk.durationMs / 1000).toFixed(1)}s] "${chunk.text}"`);
+            // Show unique phrases (deduplicated)
+            const uniquePhrases = [...new Set(session.chunks.map(c => c.text.trim()))];
+            if (uniquePhrases.length > 0 && uniquePhrases.length < session.totalChunks) {
+                console.log('[StreamClient] Unique phrases detected (', uniquePhrases.length, 'distinct):');
+                uniquePhrases.forEach((phrase, index) => {
+                    if (phrase.length > 0) {
+                        console.log(`[StreamClient]   - "${phrase}"`);
+                    }
                 });
+                console.log('[StreamClient] ──────────────────────────────────────────');
             }
             console.log('═'.repeat(80));
             

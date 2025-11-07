@@ -81,14 +81,19 @@ class AudioProcessor {
         const hasMaxAudio = duration >= this.config.maxAudioDuration;
         const silenceDetected = this.isSilent();
         
+        // Don't send if too little audio (< min duration)
+        if (duration < this.config.minAudioDuration) {
+            return false;
+        }
+        
         // Send if:
-        // 1. Reached max duration (force send)
-        // 2. Have min audio AND silence detected
+        // 1. Reached max duration (force send to prevent too-long chunks)
         if (hasMaxAudio) {
             console.log(`[AudioProcessor] ${this.ucid}: Max duration reached (${duration}ms) - sending`);
             return true;
         }
         
+        // 2. Have sufficient audio AND clear silence detected
         if (hasMinAudio && silenceDetected) {
             console.log(`[AudioProcessor] ${this.ucid}: Silence detected after ${duration}ms - sending`);
             return true;
