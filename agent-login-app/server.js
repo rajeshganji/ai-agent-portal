@@ -280,9 +280,37 @@ console.log('=================================');
 
 // Initialize Stream Client
 let streamClient = null;
+let streamServer = null;
 
 // Export streamClient getter for routes
 const getStreamClient = () => streamClient;
+
+// Initialize StreamClient and StreamServer BEFORE server.listen()
+(async () => {
+    console.log('=================================');
+    console.log('🎤 Initializing Stream Client...');
+    console.log('=================================');
+    
+    streamClient = new StreamClient({
+        url: null, // Not connecting to external server, handling incoming connections
+        reconnectInterval: 5000,
+        logDir: path.join(__dirname, 'logs/stream')
+    });
+    
+    // Initialize (creates log directory, doesn't connect since url is null)
+    await streamClient.initialize();
+    console.log('[StreamClient] Stream client ready to process events');
+    
+    console.log('=================================');
+    console.log('🎙️  Initializing Stream Server (for Ozonetel)...');
+    console.log('=================================');
+    
+    // Initialize StreamServer with StreamClient handler BEFORE server.listen()
+    streamServer = new StreamServer(server, streamClient);
+    global.streamServer = streamServer; // Store globally for status API
+    console.log('[StreamServer] Ready to receive events at: /ws');
+    console.log('[StreamServer] StreamClient connected for message processing');
+})();
 
 // Ensure HTTP server handles upgrade requests properly (for Railway proxy)
 server.on('upgrade', (request, socket, head) => {
@@ -309,32 +337,6 @@ server.listen(PORT, '0.0.0.0', async () => {
     console.log('=================================');
     console.log('🎉 Server is ready!');
     console.log('=================================');
-    
-    // Initialize WebSocket Stream Server for receiving events from Ozonetel
-    console.log('=================================');
-    console.log('🎙️  Initializing Stream Server (for Ozonetel)...');
-    console.log('=================================');
-    
-    // Always initialize StreamClient to handle incoming audio data
-    console.log('=================================');
-    console.log('🎤 Initializing Stream Client...');
-    console.log('=================================');
-    
-    streamClient = new StreamClient({
-        url: null, // Not connecting to external server, handling incoming connections
-        reconnectInterval: 5000,
-        logDir: path.join(__dirname, 'logs/stream')
-    });
-    
-    // Initialize (creates log directory, doesn't connect since url is null)
-    await streamClient.initialize();
-    console.log('[StreamClient] Stream client ready to process events');
-    
-    // Initialize StreamServer with StreamClient handler
-    const streamServer = new StreamServer(server, streamClient);
-    global.streamServer = streamServer; // Store globally for status API
-    console.log('[StreamServer] Ready to receive events at: /ws');
-    console.log('[StreamServer] StreamClient connected for message processing');
     
     // Set stream client getter for routes
     streamModule.setStreamClientGetter(getStreamClient);
