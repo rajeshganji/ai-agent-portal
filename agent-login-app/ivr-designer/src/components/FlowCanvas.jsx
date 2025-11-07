@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -11,12 +11,14 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import { useFlowStore } from '../store/flowStore';
+import StartNode from './nodes/StartNode';
 import PlayTextNode from './nodes/PlayTextNode';
 import PlayAudioNode from './nodes/PlayAudioNode';
 import FindIntentNode from './nodes/FindIntentNode';
 import ConditionalNode from './nodes/ConditionalNode';
 
 const nodeTypes = {
+  start: StartNode,
   playText: PlayTextNode,
   playAudio: PlayAudioNode,
   findIntent: FindIntentNode,
@@ -31,6 +33,26 @@ const FlowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { setSelectedNode, setNodes: setStoreNodes, setEdges: setStoreEdges } = useFlowStore();
+
+  // Initialize with Start node if empty
+  const initializeFlow = useCallback(() => {
+    if (nodes.length === 0) {
+      const startNode = {
+        id: 'start-node',
+        type: 'start',
+        position: { x: 250, y: 50 },
+        data: { label: 'Start' },
+        draggable: true,
+        deletable: false, // Can't delete the start node
+      };
+      setNodes([startNode]);
+    }
+  }, [nodes.length, setNodes]);
+
+  // Initialize flow on mount
+  useEffect(() => {
+    initializeFlow();
+  }, [initializeFlow]);
 
   // Sync with store
   const syncToStore = useCallback(() => {
@@ -139,6 +161,7 @@ const FlowCanvas = () => {
         <MiniMap
           nodeColor={(node) => {
             switch (node.type) {
+              case 'start': return '#10b981';
               case 'playText': return '#3b82f6';
               case 'playAudio': return '#a855f7';
               case 'findIntent': return '#22c55e';
