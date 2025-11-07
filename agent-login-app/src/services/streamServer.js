@@ -15,6 +15,8 @@ class StreamServer {
         this.wss = new WebSocket.Server({ 
             server,
             path: '/ws',
+            maxPayload: 100 * 1024 * 1024, // 100MB max message size (increased for audio data)
+            perMessageDeflate: false, // Disable compression for better performance with audio
             verifyClient: (info, callback) => {
                 const protocol = info.secure ? 'wss' : 'ws';
                 console.log('\n========== NEW WEBSOCKET CONNECTION ATTEMPT ==========');
@@ -74,14 +76,23 @@ class StreamServer {
         // Generate connection ID
         const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         this.connections.set(connectionId, ws);
+        
+        // Track message statistics
+        ws.messageCount = 0;
+        ws.totalBytesReceived = 0;
+        
         console.log(`[StreamServer] Connection ID: ${connectionId}`);
         console.log(`[StreamServer] Total active connections: ${this.connections.size}`);
         console.log('[StreamServer] WebSocket ready state:', ws.readyState);
+        console.log('[StreamServer] Max payload size: 100 MB');
         console.log('=====================================================\n');
 
         ws.on('message', (data) => {
-            console.log(`[StreamServer] ⚡ Message received on connection ${connectionId}`);
-            console.log(`[StreamServer] Data type: ${typeof data}, Length: ${data.length} bytes`);
+            ws.messageCount++;
+            ws.totalBytesReceived += data.length;
+            console.log(`[StreamServer] ⚡ Message #${ws.messageCount} received on connection ${connectionId}`);
+            console.log(`[StreamServer] This message size: ${data.length} bytes`);
+            console.log(`[StreamServer] Total bytes received: ${ws.totalBytesReceived} bytes`);
             this.handleMessage(ws, data, connectionId);
         });
 
@@ -92,6 +103,8 @@ class StreamServer {
             console.log('[StreamServer] Close Reason:', reason ? reason.toString() : 'No reason provided');
             console.log('[StreamServer] Client IP:', clientIp);
             console.log('[StreamServer] Time connected:', new Date().toISOString());
+            console.log('[StreamServer] Messages received:', ws.messageCount || 0);
+            console.log('[StreamServer] Total bytes received:', ws.totalBytesReceived || 0);
             console.log('[StreamServer] Remaining connections:', this.connections.size - 1);
             
             // Log standard close codes
@@ -163,13 +176,41 @@ class StreamServer {
 
     handleMessage(ws, data, connectionId) {
         try {
-            console.log(`[StreamServer] Processing message from ${connectionId}`);
-            console.log(`[StreamServer] Raw data (first 200 chars):`, data.toString().substring(0, 200));
+            console.log('\n========== MESSAGE RECEIVED ==========');
+            console.log(`[StreamServer] Connection ID: ${connectionId}`);
+            console.log(`[StreamServer] Data type: ${typeof data}`);
+            console.log(`[StreamServer] Data size: ${data.length} bytes`);
+            console.log(`[StreamServer] Raw data (first 500 chars):`, data.toString().substring(0, 500));
             
             const message = JSON.parse(data.toString());
             console.log('[StreamServer] ✅ JSON parsed successfully');
-            console.log('[StreamServer] Message event/type:', message.event || message.type);
-            console.log('[StreamServer] Full message:', JSON.stringify(message, null, 2));
+            
+            // Log Ozonetel-specific fields
+            if (message.event) {
+                console.log(`[StreamServer] 📡 Event: ${message.event}`);
+            }
+            if (message.type) {
+                console.log(`[StreamServer] 📋 Type: ${message.type}`);
+            }
+            if (message.ucid) {
+                console.log(`[StreamServer] 🔑 UCID: ${message.ucid}`);
+            }
+            
+            // Log audio data info if present
+            if (message.event === 'media' || message.type === 'media') {
+                console.log('[StreamServer] 🎵 AUDIO DATA RECEIVED');
+                if (message.data) {
+                    console.log(`[StreamServer] Sample Rate: ${message.data.sampleRate}`);
+                    console.log(`[StreamServer] Bits Per Sample: ${message.data.bitsPerSample}`);
+                    console.log(`[StreamServer] Channel Count: ${message.data.channelCount}`);
+                    console.log(`[StreamServer] Number of Frames: ${message.data.numberOfFrames}`);
+                    console.log(`[StreamServer] Samples count: ${message.data.samples?.length || 0}`);
+                    console.log(`[StreamServer] First 10 samples:`, message.data.samples?.slice(0, 10));
+                }
+            }
+            
+            console.log('[StreamServer] Full message structure:', JSON.stringify(message, null, 2).substring(0, 1000));
+            console.log('=====================================\n');
 
             // Forward to StreamClient message handler
             if (this.streamClient) {
