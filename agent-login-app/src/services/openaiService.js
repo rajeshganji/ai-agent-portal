@@ -27,7 +27,7 @@ class OpenAIService {
      * @param {string} language - Language code (e.g., 'en', 'hi', 'auto' for detection)
      * @returns {Promise<{text: string, language: string}>}
      */
-    async speechToText(audioBuffer, language = 'auto') {
+    async speechToText(audioBuffer, language = 'en') {
         if (!this.enabled) {
             throw new Error('OpenAI service not enabled - check OPENAI_API_KEY');
         }
