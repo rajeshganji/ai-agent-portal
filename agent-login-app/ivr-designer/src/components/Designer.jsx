@@ -58,10 +58,21 @@ function Designer() {
       setSaving(true);
       const flowData = getFlowJSON();
       
+      console.log('🔄 [Designer] Saving flow:', {
+        currentFlowId,
+        flowName: flowData.name,
+        nodeCount: flowData.nodes?.length || 0,
+        edgeCount: flowData.edges?.length || 0
+      });
+      
       let response;
+      let url;
+      
       if (currentFlowId) {
         // Update existing flow
-        response = await fetch(`/api/ivr/designer/flows/${currentFlowId}`, {
+        url = `/api/ivr/designer/flows/${currentFlowId}`;
+        console.log('📝 [Designer] Updating existing flow:', currentFlowId);
+        response = await fetch(url, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -70,7 +81,9 @@ function Designer() {
         });
       } else {
         // Create new flow
-        response = await fetch('/api/ivr/designer/flows', {
+        url = '/api/ivr/designer/flows';
+        console.log('🆕 [Designer] Creating new flow');
+        response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -79,17 +92,25 @@ function Designer() {
         });
       }
       
+      console.log('🌐 [Designer] API Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Failed to save flow');
+        const errorText = await response.text();
+        console.error('❌ [Designer] Save failed:', response.status, errorText);
+        throw new Error(`Failed to save flow: ${response.status} ${errorText}`);
       }
       
       const result = await response.json();
+      console.log('✅ [Designer] Save successful:', result);
       
       if (!currentFlowId && result.id) {
         // Set the new flow ID for future saves
+        console.log('🆔 [Designer] Setting new flow ID:', result.id);
         setFlowId(result.id);
-        // Update URL to include the flow ID
-        navigate(`/designer/${result.id}`, { replace: true });
+        // Update URL to include the flow ID - FIXED PATH
+        const newPath = `/designer/${result.id}`;
+        console.log('🔄 [Designer] Navigating to:', newPath);
+        navigate(newPath, { replace: true });
       }
       
       console.log('Flow saved successfully:', result);
@@ -113,7 +134,8 @@ function Designer() {
   };
 
   const handleBackToFlows = () => {
-    navigate('/');
+    console.log('🔙 [Designer] Navigating back to flows list');
+    navigate('/flows');
   };
 
   if (loading) {
@@ -170,7 +192,17 @@ function Designer() {
               {flowName}
             </h1>
             <p className="text-sm text-gray-300">
-              {currentFlowId ? `Editing Flow ${currentFlowId}` : 'New Flow'}
+              {currentFlowId ? (
+                <span className="flex items-center gap-2">
+                  <span>Flow ID: <span className="font-mono bg-white/10 px-2 py-1 rounded">{currentFlowId}</span></span>
+                  <span className="text-xs text-green-300">✓ Saved</span>
+                </span>
+              ) : (
+                <span className="text-yellow-300">⚠️ Unsaved Flow</span>
+              )}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              URL: {window.location.pathname}
             </p>
           </div>
         </div>

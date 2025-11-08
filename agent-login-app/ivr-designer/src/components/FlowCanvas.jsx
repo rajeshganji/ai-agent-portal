@@ -226,7 +226,16 @@ const FlowCanvas = () => {
         onPaneClick={onPaneClick}
         onMouseMove={onMouseMove}
         nodeTypes={nodeTypes}
+        // Canvas size and zoom optimization
         fitView
+        fitViewOptions={{
+          padding: 0.3,      // More padding around nodes
+          minZoom: 0.3,      // Allow zooming out much further
+          maxZoom: 1.5,      // Reasonable max zoom
+        }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}  // Start more zoomed out
+        minZoom={0.1}        // Allow very wide view
+        maxZoom={2}
         className="beautiful-flow-canvas"
         // Touch and performance optimization
         panOnDrag={true}
@@ -234,16 +243,22 @@ const FlowCanvas = () => {
         panOnScrollSpeed={0.5}
         preventScrolling={false}
         selectNodesOnDrag={false}
-        onInit={() => {
-          console.log('ReactFlow initialized');
-          // Fix touch event performance warnings by ensuring passive listeners
+        onInit={(reactFlowInstance) => {
+          console.log('🎯 [FlowCanvas] ReactFlow initialized');
+          
+          // Set a better initial viewport
           setTimeout(() => {
+            reactFlowInstance.setViewport({ x: 50, y: 50, zoom: 0.6 });
+            
+            // Fix touch event performance warnings by ensuring passive listeners
             const viewport = document.querySelector('.react-flow__viewport');
             if (viewport) {
-              // Add CSS to prevent scroll blocking
               viewport.style.touchAction = 'manipulation';
-              // Log that touch optimization is applied
-              console.debug('Touch optimization applied to ReactFlow viewport');
+              console.log('🎨 [FlowCanvas] Touch optimization applied to ReactFlow viewport');
+            }
+            
+            if (debugMode) {
+              console.log('🔍 [FlowCanvas] Initial viewport set - zoom: 0.6, better node visibility');
             }
           }, 100);
         }}
