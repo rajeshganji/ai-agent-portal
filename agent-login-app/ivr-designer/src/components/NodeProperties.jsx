@@ -1,8 +1,18 @@
-import { X, Settings, Sparkles, Play, Phone, Mic } from 'lucide-react';
+import { X, Settings, Sparkles, Play, Phone, Mic, Save, Edit3 } from 'lucide-react';
 import { useFlowStore } from '../store/flowStore';
 
 const NodeProperties = () => {
-  const { selectedNode, updateNodeData, setSelectedNode } = useFlowStore();
+  const { 
+    selectedNode, 
+    nodeBeingEdited,
+    isEditingMode,
+    startEditingNode,
+    updateNodeBeingEdited,
+    saveNodeChanges,
+    cancelEditingNode,
+    setSelectedNode,
+    debugMode
+  } = useFlowStore();
 
   if (!selectedNode) {
     return (
@@ -26,8 +36,40 @@ const NodeProperties = () => {
     );
   }
 
+  // Debug logging
+  if (debugMode) {
+    console.log('🎨 [NodeProperties] Render - Selected:', selectedNode?.id, 'EditMode:', isEditingMode);
+  }
+
+  // Use nodeBeingEdited if in editing mode, otherwise use selectedNode
+  const currentNodeData = isEditingMode ? nodeBeingEdited?.data : selectedNode?.data;
+  
+  const handleStartEdit = () => {
+    if (debugMode) {
+      console.log('🔧 [NodeProperties] Starting edit mode for node:', selectedNode.id);
+    }
+    startEditingNode(selectedNode);
+  };
+
   const handleChange = (field, value) => {
-    updateNodeData(selectedNode.id, { [field]: value });
+    if (debugMode) {
+      console.log('✏️ [NodeProperties] Field changed:', field, '=', value);
+    }
+    updateNodeBeingEdited(field, value);
+  };
+
+  const handleSave = () => {
+    if (debugMode) {
+      console.log('💾 [NodeProperties] Saving changes');
+    }
+    saveNodeChanges();
+  };
+
+  const handleCancel = () => {
+    if (debugMode) {
+      console.log('❌ [NodeProperties] Cancelling changes');
+    }
+    cancelEditingNode();
   };
 
   const getNodeIcon = (type) => {
@@ -71,15 +113,18 @@ const NodeProperties = () => {
               <textarea
                 id="playtext-content"
                 name="playtext-content"
-                className="property-input h-24"
+                className={`property-input h-24 ${!isEditingMode ? 'opacity-60 cursor-not-allowed' : ''}`}
                 rows={4}
-                value={selectedNode.data.text || ''}
+                value={currentNodeData?.text || ''}
                 onChange={(e) => handleChange('text', e.target.value)}
                 placeholder="Enter the text to be spoken to callers..."
                 autoComplete="off"
+                readOnly={!isEditingMode}
+                disabled={!isEditingMode}
               />
               <div className="text-xs text-white/60 mt-1">
                 💡 Keep it conversational and clear for better user experience
+                {!isEditingMode && <span className="text-yellow-300 ml-2">Click Edit to modify</span>}
               </div>
             </div>
             
@@ -93,10 +138,12 @@ const NodeProperties = () => {
                 type="number"
                 min="1"
                 max="10"
-                className="property-input"
-                value={selectedNode.data.speed || 3}
+                className={`property-input ${!isEditingMode ? 'opacity-60 cursor-not-allowed' : ''}`}
+                value={currentNodeData?.speed || 3}
                 onChange={(e) => handleChange('speed', e.target.value)}
                 autoComplete="off"
+                readOnly={!isEditingMode}
+                disabled={!isEditingMode}
               />
               <div className="flex justify-between text-xs text-white/60 mt-1">
                 <span>1 = Slow</span>
@@ -354,16 +401,48 @@ const NodeProperties = () => {
             <h3 className="font-bold text-lg text-white flex items-center gap-2">
               Properties
               <Sparkles className="w-5 h-5 text-yellow-300" />
+              {isEditingMode && <span className="text-xs bg-green-500 px-2 py-1 rounded">EDITING</span>}
             </h3>
             <p className="text-white/70 text-xs">Configure node behavior</p>
           </div>
         </div>
-        <button
-          onClick={() => setSelectedNode(null)}
-          className="p-2 hover:bg-white/20 rounded-xl transition-all text-white/70 hover:text-white"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {!isEditingMode ? (
+            <>
+              <button
+                onClick={handleStartEdit}
+                className="p-2 hover:bg-white/20 rounded-xl transition-all text-white/70 hover:text-white flex items-center gap-1"
+                title="Start Editing"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setSelectedNode(null)}
+                className="p-2 hover:bg-white/20 rounded-xl transition-all text-white/70 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleSave}
+                className="p-2 hover:bg-green-500/20 bg-green-500/10 rounded-xl transition-all text-green-300 hover:text-green-200 flex items-center gap-1"
+                title="Save Changes"
+              >
+                <Save className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleCancel}
+                className="p-2 hover:bg-red-500/20 bg-red-500/10 rounded-xl transition-all text-red-300 hover:text-red-200"
+                title="Cancel Changes"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="mb-6 p-4 bg-white/10 rounded-xl border border-white/20 backdrop-blur-sm">

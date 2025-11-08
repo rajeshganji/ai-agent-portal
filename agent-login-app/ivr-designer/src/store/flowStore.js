@@ -8,25 +8,143 @@ export const useFlowStore = create((set, get) => ({
   // Selected node for properties panel
   selectedNode: null,
   
+  // COPY-BASED EDITING: Node copy for isolated editing
+  nodeBeingEdited: null,
+  isEditingMode: false,
+  
   // Flow metadata
   flowName: 'Untitled Flow',
   flowId: null,
   
-  // Actions
-  setNodes: (nodes) => set({ nodes }),
-  setEdges: (edges) => set({ edges }),
-  setSelectedNode: (node) => set({ selectedNode: node }),
-  setFlowName: (name) => set({ flowName: name }),
-  setFlowId: (id) => set({ flowId: id }),
+  // Debug logging
+  debugMode: true,
   
-  // Update node data
-  updateNodeData: (nodeId, newData) => set((state) => ({
-    nodes: state.nodes.map((node) =>
-      node.id === nodeId
-        ? { ...node, data: { ...node.data, ...newData } }
-        : node
-    ),
-  })),
+  // Actions
+  setNodes: (nodes) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🔄 [FlowStore] Setting nodes:', nodes?.length || 0, 'nodes');
+    }
+    set({ nodes });
+  },
+  
+  setEdges: (edges) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🔄 [FlowStore] Setting edges:', edges?.length || 0, 'edges');
+    }
+    set({ edges });
+  },
+  
+  setSelectedNode: (node) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🎯 [FlowStore] Selecting node:', node?.id || 'null');
+    }
+    set({ selectedNode: node });
+  },
+  
+  setFlowName: (name) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('📝 [FlowStore] Setting flow name:', name);
+    }
+    set({ flowName: name });
+  },
+  
+  setFlowId: (id) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🆔 [FlowStore] Setting flow ID:', id);
+    }
+    set({ flowId: id });
+  },
+  
+  // COPY-BASED EDITING SYSTEM
+  startEditingNode: (node) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🔧 [FlowStore] Starting edit mode for node:', node.id, JSON.stringify(node.data, null, 2));
+    }
+    // Create a deep copy of the node for isolated editing
+    const nodeCopy = JSON.parse(JSON.stringify(node));
+    set({ 
+      nodeBeingEdited: nodeCopy,
+      isEditingMode: true,
+      selectedNode: node
+    });
+  },
+  
+  // Update the temporary copy (doesn't affect canvas until save)
+  updateNodeBeingEdited: (field, value) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('✏️ [FlowStore] Updating node copy:', field, '=', value);
+    }
+    set((state) => ({
+      nodeBeingEdited: state.nodeBeingEdited ? {
+        ...state.nodeBeingEdited,
+        data: {
+          ...state.nodeBeingEdited.data,
+          [field]: value
+        }
+      } : null
+    }));
+  },
+  
+  // Save the edited copy back to the actual flow
+  saveNodeChanges: () => {
+    const state = get();
+    if (!state.nodeBeingEdited || !state.selectedNode) {
+      if (state.debugMode) {
+        console.warn('⚠️ [FlowStore] Cannot save: no node being edited');
+      }
+      return;
+    }
+    
+    if (state.debugMode) {
+      console.log('💾 [FlowStore] Saving node changes:', state.nodeBeingEdited.id, 
+        JSON.stringify(state.nodeBeingEdited.data, null, 2));
+    }
+    
+    // Update the actual nodes array
+    set((state) => ({
+      nodes: state.nodes.map((node) =>
+        node.id === state.nodeBeingEdited.id
+          ? { ...node, data: { ...state.nodeBeingEdited.data } }
+          : node
+      ),
+      isEditingMode: false,
+      nodeBeingEdited: null
+    }));
+  },
+  
+  // Cancel editing and discard changes
+  cancelEditingNode: () => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('❌ [FlowStore] Cancelling edit mode');
+    }
+    set({
+      isEditingMode: false,
+      nodeBeingEdited: null
+    });
+  },
+  
+  // Update node data (old method - now used only for non-form updates)
+  updateNodeData: (nodeId, newData) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🔄 [FlowStore] Direct node update:', nodeId, newData);
+    }
+    set((state) => ({
+      nodes: state.nodes.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, ...newData } }
+          : node
+      ),
+    }));
+  },
   
   // Add node
   addNode: (node) => set((state) => ({

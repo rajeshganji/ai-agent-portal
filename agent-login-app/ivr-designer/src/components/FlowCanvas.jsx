@@ -37,17 +37,22 @@ const FlowCanvas = () => {
     edges: storeEdges, 
     setSelectedNode, 
     setNodes: setStoreNodes, 
-    setEdges: setStoreEdges 
+    setEdges: setStoreEdges,
+    debugMode
   } = useFlowStore();
 
   // Only sync store to local state on mount if store has data
   useEffect(() => {
     if (storeNodes.length > 0 && nodes.length === 0) {
-      console.log('Loading nodes from store:', storeNodes.length);
+      if (debugMode) {
+        console.log('🔄 [FlowCanvas] Loading nodes from store:', storeNodes.length);
+      }
       setNodes(storeNodes);
     }
     if (storeEdges.length > 0 && edges.length === 0) {
-      console.log('Loading edges from store:', storeEdges.length);
+      if (debugMode) {
+        console.log('🔄 [FlowCanvas] Loading edges from store:', storeEdges.length);
+      }
       setEdges(storeEdges);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -167,10 +172,30 @@ const FlowCanvas = () => {
 
   const onNodeClick = useCallback(
     (event, node) => {
+      if (debugMode) {
+        console.log('🎯 [FlowCanvas] Node clicked:', node.id, 'Type:', node.type);
+      }
       setSelectedNode(node);
     },
-    [setSelectedNode]
+    [setSelectedNode, debugMode]
   );
+
+  // Add mouse event logging
+  const onMouseMove = useCallback((event) => {
+    if (debugMode) {
+      // Only log every 100th move to avoid spam
+      if (Math.random() > 0.99) {
+        console.log('🖱️ [FlowCanvas] Mouse move:', { x: event.clientX, y: event.clientY });
+      }
+    }
+  }, [debugMode]);
+
+  const onPaneClick = useCallback((event) => {
+    if (debugMode) {
+      console.log('🖱️ [FlowCanvas] Pane clicked - deselecting node');
+    }
+    setSelectedNode(null);
+  }, [setSelectedNode, debugMode]);
 
   return (
     <div ref={reactFlowWrapper} className="flex-1 relative overflow-hidden">
@@ -181,10 +206,16 @@ const FlowCanvas = () => {
         nodes={nodes}
         edges={edges}
         onNodesChange={(changes) => {
+          if (debugMode && changes.length > 0) {
+            console.log('📊 [FlowCanvas] Nodes changed:', changes.length, 'changes');
+          }
           onNodesChange(changes);
           setTimeout(syncToStore, 100);
         }}
         onEdgesChange={(changes) => {
+          if (debugMode && changes.length > 0) {
+            console.log('🔗 [FlowCanvas] Edges changed:', changes.length, 'changes');
+          }
           onEdgesChange(changes);
           setTimeout(syncToStore, 100);
         }}
@@ -192,6 +223,8 @@ const FlowCanvas = () => {
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        onMouseMove={onMouseMove}
         nodeTypes={nodeTypes}
         fitView
         className="beautiful-flow-canvas"
