@@ -4,9 +4,36 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/ivr-designer/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; connect-src 'self';" />
-    <title>ivr-designer</title>
-    <script type="module" crossorigin src="/ivr-designer/assets/index-DamW0As-.js"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none';" />
+    <title>IVR Designer</title>
+    <style>
+      /* Fix touch performance warnings */
+      * {
+        touch-action: pan-x pan-y;
+      }
+      .react-flow__viewport {
+        touch-action: none !important;
+      }
+    </style>
+    <script>
+      // Prevent browser extension postMessage errors
+      (function() {
+        const originalPostMessage = window.postMessage;
+        window.postMessage = function(message, targetOrigin, transfer) {
+          try {
+            return originalPostMessage.call(this, message, targetOrigin, transfer);
+          } catch (error) {
+            if (error.message.includes('target origin') && error.message.includes('chrome-extension://')) {
+              // Silently ignore chrome extension origin mismatches
+              console.debug('Ignoring chrome extension postMessage error:', error.message);
+              return;
+            }
+            throw error;
+          }
+        };
+      })();
+    </script>
+    <script type="module" crossorigin src="/ivr-designer/assets/index-BNC9m05v.js"></script>
     <link rel="stylesheet" crossorigin href="/ivr-designer/assets/index-C_tq-43X.css">
   </head>
   <body>

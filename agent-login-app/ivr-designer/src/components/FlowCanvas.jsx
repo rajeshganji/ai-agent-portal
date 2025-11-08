@@ -195,6 +195,25 @@ const FlowCanvas = () => {
         nodeTypes={nodeTypes}
         fitView
         className="beautiful-flow-canvas"
+        // Touch and performance optimization
+        panOnDrag={true}
+        panOnScroll={false}
+        panOnScrollSpeed={0.5}
+        preventScrolling={false}
+        selectNodesOnDrag={false}
+        onInit={() => {
+          console.log('ReactFlow initialized');
+          // Fix touch event performance warnings by ensuring passive listeners
+          setTimeout(() => {
+            const viewport = document.querySelector('.react-flow__viewport');
+            if (viewport) {
+              // Add CSS to prevent scroll blocking
+              viewport.style.touchAction = 'manipulation';
+              // Log that touch optimization is applied
+              console.debug('Touch optimization applied to ReactFlow viewport');
+            }
+          }, 100);
+        }}
       >
         <Background 
           color="#e0e7ff" 
