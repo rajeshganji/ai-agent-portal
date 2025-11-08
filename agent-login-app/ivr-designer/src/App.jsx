@@ -1,19 +1,17 @@
-import Toolbar from './components/Toolbar';
-import NodePalette from './components/NodePalette';
-import FlowCanvas from './components/FlowCanvas';
-import NodeProperties from './components/NodeProperties';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import FlowsList from './components/FlowsList';
+import Designer from './components/Designer';
 import './App.css';
 
 function App() {
   return (
-    <div className="h-screen flex flex-col gradient-bg-1 animated-bg">
-      <Toolbar />
-      <div className="flex-1 flex overflow-hidden">
-        <NodePalette />
-        <FlowCanvas />
-        <NodeProperties />
-      </div>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<FlowsList />} />
+        <Route path="/designer" element={<Designer />} />
+        <Route path="/designer/:flowId" element={<Designer />} />
+      </Routes>
+    </Router>
   );
 }
 
