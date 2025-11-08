@@ -64,16 +64,19 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label flex items-center gap-2">
+              <label className="property-label flex items-center gap-2" htmlFor="playtext-content">
                 <Play className="w-4 h-4" />
                 Text to Speak
               </label>
               <textarea
+                id="playtext-content"
+                name="playtext-content"
                 className="property-input h-24"
                 rows={4}
                 value={selectedNode.data.text || ''}
                 onChange={(e) => handleChange('text', e.target.value)}
                 placeholder="Enter the text to be spoken to callers..."
+                autoComplete="off"
               />
               <div className="text-xs text-white/60 mt-1">
                 💡 Keep it conversational and clear for better user experience
@@ -81,16 +84,19 @@ const NodeProperties = () => {
             </div>
             
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="playtext-speed">
                 🎚️ Voice Speed (1-10)
               </label>
               <input
+                id="playtext-speed"
+                name="playtext-speed"
                 type="number"
                 min="1"
                 max="10"
                 className="property-input"
                 value={selectedNode.data.speed || 3}
                 onChange={(e) => handleChange('speed', e.target.value)}
+                autoComplete="off"
               />
               <div className="flex justify-between text-xs text-white/60 mt-1">
                 <span>1 = Slow</span>
@@ -105,16 +111,19 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label flex items-center gap-2">
+              <label className="property-label flex items-center gap-2" htmlFor="playaudio-url">
                 <Mic className="w-4 h-4" />
                 Audio File URL
               </label>
               <input
+                id="playaudio-url"
+                name="playaudio-url"
                 type="url"
                 className="property-input"
                 value={selectedNode.data.audioUrl || ''}
                 onChange={(e) => handleChange('audioUrl', e.target.value)}
                 placeholder="https://example.com/audio.mp3"
+                autoComplete="off"
               />
               <div className="text-xs text-white/60 mt-1">
                 📎 Supported formats: MP3, WAV, M4A
@@ -139,15 +148,18 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="findintent-prompt">
                 🤖 AI Prompt for User
               </label>
               <textarea
+                id="findintent-prompt"
+                name="findintent-prompt"
                 className="property-input h-20"
                 rows={3}
                 value={selectedNode.data.prompt || ''}
                 onChange={(e) => handleChange('prompt', e.target.value)}
                 placeholder="How can I help you today?"
+                autoComplete="off"
               />
               <div className="text-xs text-white/60 mt-1">
                 🎯 This message will be spoken to collect user intent
@@ -155,15 +167,18 @@ const NodeProperties = () => {
             </div>
             
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="findintent-intents">
                 🎯 Expected Intents (one per line)
               </label>
               <textarea
+                id="findintent-intents"
+                name="findintent-intents"
                 className="property-input h-24"
                 rows={4}
                 value={(selectedNode.data.intents || []).join('\n')}
                 onChange={(e) => handleChange('intents', e.target.value.split('\n').filter(i => i.trim()))}
                 placeholder="sales&#10;support&#10;billing&#10;other"
+                autoComplete="off"
               />
               <div className="text-xs text-white/60 mt-1">
                 🔗 Each intent becomes an output connection point
@@ -176,15 +191,18 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="conditional-condition">
                 ❓ Condition Logic
               </label>
               <input
+                id="conditional-condition"
+                name="conditional-condition"
                 type="text"
                 className="property-input"
                 value={selectedNode.data.condition || ''}
                 onChange={(e) => handleChange('condition', e.target.value)}
                 placeholder="intent === 'sales'"
+                autoComplete="off"
               />
               <div className="text-xs text-white/60 mt-1">
                 ⚡ Available variables: intent, dtmf, callerId
@@ -206,16 +224,19 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label flex items-center gap-2">
+              <label className="property-label flex items-center gap-2" htmlFor="transfer-phone">
                 <Phone className="w-4 h-4" />
                 Transfer Phone Number
               </label>
               <input
+                id="transfer-phone"
+                name="transfer-phone"
                 type="tel"
                 className="property-input"
                 value={selectedNode.data.phoneNumber || ''}
                 onChange={(e) => handleChange('phoneNumber', e.target.value)}
                 placeholder="+1234567890"
+                autoComplete="tel"
               />
               <div className="text-xs text-white/60 mt-1">
                 📞 Include country code for international numbers
@@ -228,28 +249,34 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="collectinput-prompt">
                 💬 Input Prompt
               </label>
               <textarea
+                id="collectinput-prompt"
+                name="collectinput-prompt"
                 className="property-input h-20"
                 value={selectedNode.data.prompt || ''}
                 onChange={(e) => handleChange('prompt', e.target.value)}
                 placeholder="Please enter your account number"
+                autoComplete="off"
               />
             </div>
             
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="collectinput-timeout">
                 ⏱️ Timeout (seconds)
               </label>
               <input
+                id="collectinput-timeout"
+                name="collectinput-timeout"
                 type="number"
                 min="1"
                 max="30"
                 className="property-input"
                 value={selectedNode.data.timeout || 5}
                 onChange={(e) => handleChange('timeout', e.target.value)}
+                autoComplete="off"
               />
             </div>
           </div>
@@ -259,23 +286,28 @@ const NodeProperties = () => {
         return (
           <div className="space-y-6">
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="apicall-url">
                 🌐 API Endpoint
               </label>
               <input
+                id="apicall-url"
+                name="apicall-url"
                 type="url"
                 className="property-input"
                 value={selectedNode.data.url || ''}
                 onChange={(e) => handleChange('url', e.target.value)}
                 placeholder="https://api.example.com/endpoint"
+                autoComplete="url"
               />
             </div>
             
             <div className="property-card">
-              <label className="property-label">
+              <label className="property-label" htmlFor="apicall-method">
                 📡 HTTP Method
               </label>
               <select
+                id="apicall-method"
+                name="apicall-method"
                 className="property-input"
                 value={selectedNode.data.method || 'GET'}
                 onChange={(e) => handleChange('method', e.target.value)}
