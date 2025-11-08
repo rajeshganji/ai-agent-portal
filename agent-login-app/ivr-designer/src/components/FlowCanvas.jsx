@@ -40,13 +40,30 @@ const FlowCanvas = () => {
     setEdges: setStoreEdges 
   } = useFlowStore();
 
-  // Sync store nodes/edges to local state when store changes
+  // Sync store nodes/edges to local state when store changes (prevent infinite loops)
+  const prevStoreNodesRef = useRef([]);
+  const prevStoreEdgesRef = useRef([]);
+
   useEffect(() => {
-    if (storeNodes.length > 0 || storeEdges.length > 0) {
+    // Only sync if store data has actually changed and is different from current local state
+    const storeNodesChanged = JSON.stringify(storeNodes) !== JSON.stringify(prevStoreNodesRef.current);
+    const localNodesDifferent = JSON.stringify(storeNodes) !== JSON.stringify(nodes);
+    
+    if (storeNodes.length > 0 && storeNodesChanged && localNodesDifferent) {
       setNodes(storeNodes);
-      setEdges(storeEdges);
+      prevStoreNodesRef.current = storeNodes;
     }
-  }, [storeNodes, storeEdges, setNodes, setEdges]);
+  }, [storeNodes, nodes, setNodes]);
+
+  useEffect(() => {
+    const storeEdgesChanged = JSON.stringify(storeEdges) !== JSON.stringify(prevStoreEdgesRef.current);
+    const localEdgesDifferent = JSON.stringify(storeEdges) !== JSON.stringify(edges);
+    
+    if (storeEdges.length > 0 && storeEdgesChanged && localEdgesDifferent) {
+      setEdges(storeEdges);
+      prevStoreEdgesRef.current = storeEdges;
+    }
+  }, [storeEdges, edges, setEdges]);
 
   // Initialize with Start node if empty
   const initializeFlow = useCallback(() => {
