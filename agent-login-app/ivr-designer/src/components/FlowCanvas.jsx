@@ -40,30 +40,18 @@ const FlowCanvas = () => {
     setEdges: setStoreEdges 
   } = useFlowStore();
 
-  // Sync store nodes/edges to local state when store changes (prevent infinite loops)
-  const prevStoreNodesRef = useRef([]);
-  const prevStoreEdgesRef = useRef([]);
-
+  // Only sync store to local state on mount if store has data
   useEffect(() => {
-    // Only sync if store data has actually changed and is different from current local state
-    const storeNodesChanged = JSON.stringify(storeNodes) !== JSON.stringify(prevStoreNodesRef.current);
-    const localNodesDifferent = JSON.stringify(storeNodes) !== JSON.stringify(nodes);
-    
-    if (storeNodes.length > 0 && storeNodesChanged && localNodesDifferent) {
+    if (storeNodes.length > 0 && nodes.length === 0) {
+      console.log('Loading nodes from store:', storeNodes.length);
       setNodes(storeNodes);
-      prevStoreNodesRef.current = storeNodes;
     }
-  }, [storeNodes, nodes, setNodes]);
-
-  useEffect(() => {
-    const storeEdgesChanged = JSON.stringify(storeEdges) !== JSON.stringify(prevStoreEdgesRef.current);
-    const localEdgesDifferent = JSON.stringify(storeEdges) !== JSON.stringify(edges);
-    
-    if (storeEdges.length > 0 && storeEdgesChanged && localEdgesDifferent) {
+    if (storeEdges.length > 0 && edges.length === 0) {
+      console.log('Loading edges from store:', storeEdges.length);
       setEdges(storeEdges);
-      prevStoreEdgesRef.current = storeEdges;
     }
-  }, [storeEdges, edges, setEdges]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency - only run on mount
 
   // Initialize with Start node if empty
   const initializeFlow = useCallback(() => {
