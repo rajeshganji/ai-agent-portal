@@ -177,6 +177,7 @@ app.use('/api/stream', securityConfig.rateLimiters.general, streamModule.router)
 // Serve IVR Designer static assets FIRST (before API routes) with enhanced CSP
 console.log('[Server] Setting up IVR Designer static files');
 app.use('/ivr-designer', securityConfig.ivrDesignerCSP, express.static(path.join(__dirname, 'ivr-designer/dist'), {
+    fallthrough: true, // CRITICAL: Let non-existent files fall through to next middleware
     setHeaders: (res, filepath) => {
         // Ensure correct MIME types for assets
         if (filepath.endsWith('.js')) {
