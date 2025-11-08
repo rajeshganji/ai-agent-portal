@@ -174,33 +174,32 @@ console.log('[Server] Setting up stream routes');
 const streamModule = require('./src/routes/stream.js');
 app.use('/api/stream', securityConfig.rateLimiters.general, streamModule.router);
 
-// Serve IVR Designer static assets FIRST (before API routes) with enhanced CSP
+// Serve IVR Designer static assets - Only serve actual files with extensions
 console.log('[Server] Setting up IVR Designer static files');
-app.use('/ivr-designer', securityConfig.ivrDesignerCSP, express.static(path.join(__dirname, 'ivr-designer/dist'), {
-    fallthrough: true, // CRITICAL: Let non-existent files fall through to next middleware
-    setHeaders: (res, filepath) => {
-        // Ensure correct MIME types for assets
-        if (filepath.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-        } else if (filepath.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-        }
-        // Override CSP headers for better media support
-        if (filepath.endsWith('index.html')) {
-            res.setHeader('Content-Security-Policy', 
-                "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-                "style-src 'self' 'unsafe-inline'; " +
-                "img-src 'self' data: blob:; " +
-                "media-src 'self' data: blob:; " +
-                "font-src 'self' data:; " +
-                "connect-src 'self' ws: wss:; " +
-                "object-src 'none'; " +
-                "base-uri 'self';"
-            );
-        }
-    }
-}));
+
+// Serve static assets (JS, CSS, images) with specific paths
+app.use('/ivr-designer/assets', securityConfig.ivrDesignerCSP, express.static(path.join(__dirname, 'ivr-designer/dist/assets')));
+app.use('/ivr-designer/vite.svg', securityConfig.ivrDesignerCSP, express.static(path.join(__dirname, 'ivr-designer/dist/vite.svg')));
+
+// Serve index.html for the root IVR Designer route
+app.get('/ivr-designer', securityConfig.ivrDesignerCSP, (req, res) => {
+    console.log('[IVR Designer] Root route accessed');
+    
+    // Set enhanced CSP headers for IVR Designer
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: blob:; " +
+        "media-src 'self' data: blob:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self' ws: wss:; " +
+        "object-src 'none'; " +
+        "base-uri 'self';"
+    );
+    
+    res.sendFile(path.join(__dirname, 'ivr-designer/dist/index.html'));
+});
 
 // CRITICAL: Handle /ws route for WebSocket upgrade
 // This prevents Express from returning 404/400 during upgrade handshake
