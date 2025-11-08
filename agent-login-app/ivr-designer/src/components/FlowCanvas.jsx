@@ -32,7 +32,21 @@ const FlowCanvas = () => {
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const { setSelectedNode, setNodes: setStoreNodes, setEdges: setStoreEdges } = useFlowStore();
+  const { 
+    nodes: storeNodes, 
+    edges: storeEdges, 
+    setSelectedNode, 
+    setNodes: setStoreNodes, 
+    setEdges: setStoreEdges 
+  } = useFlowStore();
+
+  // Sync store nodes/edges to local state when store changes
+  useEffect(() => {
+    if (storeNodes.length > 0 || storeEdges.length > 0) {
+      setNodes(storeNodes);
+      setEdges(storeEdges);
+    }
+  }, [storeNodes, storeEdges, setNodes, setEdges]);
 
   // Initialize with Start node if empty
   const initializeFlow = useCallback(() => {
@@ -59,6 +73,13 @@ const FlowCanvas = () => {
     setStoreNodes(nodes);
     setStoreEdges(edges);
   }, [nodes, edges, setStoreNodes, setStoreEdges]);
+
+  // Sync to store whenever nodes or edges change
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      syncToStore();
+    }
+  }, [nodes, edges, syncToStore]);
 
   const onConnect = useCallback(
     (params) => {
