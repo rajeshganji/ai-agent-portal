@@ -170,12 +170,12 @@ class StreamClient {
         if (openaiService.enabled) {
             console.log('[StreamClient] 🎙️  Initializing real-time transcription for', ucid);
             
-            // Create audio processor with LESS AGGRESSIVE chunking
+            // Create audio processor with STRICT settings to prevent false positives
             this.audioProcessors.set(ucid, new AudioProcessor(ucid, {
-                minAudioDuration: 3000,   // 3 seconds minimum (was 1000)
-                maxAudioDuration: 8000,   // 8 seconds maximum (was 5000)
-                silenceThreshold: 2000,   // 2 seconds silence (was 1000)
-                silenceAmplitude: 200     // Higher threshold (was 100)
+                minAudioDuration: 2000,   // 2 seconds minimum speech
+                maxAudioDuration: 10000,  // 10 seconds maximum
+                silenceThreshold: 1500,   // 1.5 seconds silence to detect end
+                silenceAmplitude: 500     // Higher threshold to filter noise (was 200)
             }));
             
             // Create transcription session with default language from env or 'en' (Indian English)
@@ -309,6 +309,30 @@ class StreamClient {
             console.log('[StreamClient] 📤 Sending audio chunk to OpenAI Whisper');
             console.log('[StreamClient] Chunk info:', processorInfo);
             
+            // ✅ VALIDATION: Check if audio chunk is too short (likely junk/silence)
+            if (processorInfo.durationMs < 1500) {
+                console.warn('[StreamClient] ⚠️  Audio chunk too short (${processorInfo.durationMs}ms) - skipping transcription to avoid false positives');
+                processor.reset();
+                this.transcriptionInProgress.delete(ucid);
+                return;
+            }
+            
+            // ✅ VALIDATION: Calculate audio energy to detect actual speech
+            const samples = processor.samples;
+            const sum = samples.reduce((acc, s) => acc + (s * s), 0);
+            const rms = Math.sqrt(sum / samples.length);
+            
+            // Skip if RMS is too low (silence/background noise)
+            const MIN_SPEECH_RMS = 300; // Empirically tuned for speech detection
+            if (rms < MIN_SPEECH_RMS) {
+                console.warn(`[StreamClient] ⚠️  Audio energy too low (RMS=${rms.toFixed(2)}) - skipping transcription (likely silence)`);
+                processor.reset();
+                this.transcriptionInProgress.delete(ucid);
+                return;
+            }
+            
+            console.log(`[StreamClient] ✅ Audio validation passed: duration=${processorInfo.durationMs}ms, RMS=${rms.toFixed(2)}`);
+            
             // Get language preference from session
             const languageHint = session.language || 'auto';
             
@@ -329,9 +353,48 @@ class StreamClient {
             console.log('[StreamClient] Language hint:', languageHint, '→ Detected:', language);
             console.log('[StreamClient] Text:', text);
             
+            // ✅ FILTER: Detect Whisper hallucinations (common false positives)
+            const hallucinationPatterns = [
+                /^thank you\.?$/i,
+                /^thanks\.?$/i,
+                /^you$/i,
+                /^\.{3,}$/,  // Just dots
+                /^\s*$/,      // Just whitespace
+                /^[\s\.,!?]+$/ // Just punctuation
+            ];
+            
+            const isHallucination = hallucinationPatterns.some(pattern => pattern.test(text.trim()));
+            
+            if (isHallucination) {
+                console.warn(`[StreamClient] 🚫 FILTERED: Whisper hallucination detected - "${text}" (likely silence/noise)`);
+                processor.reset();
+                this.transcriptionInProgress.delete(ucid);
+                return;
+            }
+            
+            // ✅ VALIDATION: Check for minimum meaningful content (at least 3 characters)
+            if (text.trim().length < 3) {
+                console.warn(`[StreamClient] 🚫 FILTERED: Text too short - "${text}" (likely garbage)`);
+                processor.reset();
+                this.transcriptionInProgress.delete(ucid);
+                return;
+            }
+            
             // Warn if language detection seems incorrect
             if (languageHint !== 'auto' && language !== languageHint) {
                 console.warn('[StreamClient] ⚠️  Language mismatch! Requested:', languageHint, 'Detected:', language);
+            }
+            
+            // ✅ CHECK FOR DUPLICATES: Prevent repeating same transcription
+            const lastChunk = session.chunks[session.chunks.length - 1];
+            if (lastChunk && lastChunk.text.trim() === text.trim()) {
+                const timeSinceLastChunk = Date.now() - lastChunk.timestamp;
+                if (timeSinceLastChunk < 3000) { // 3 seconds
+                    console.warn(`[StreamClient] 🚫 DUPLICATE: Same text as last chunk (${timeSinceLastChunk}ms ago) - skipping`);
+                    processor.reset();
+                    this.transcriptionInProgress.delete(ucid);
+                    return;
+                }
             }
             
             // Store transcription chunk

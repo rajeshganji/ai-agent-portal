@@ -95,18 +95,18 @@ class AudioProcessor {
             return true;
         }
         
-        // 2. Silence detected after user stopped speaking (muted phone, stopped talking, etc.)
-        // Send even if we haven't reached minAudioDuration - captures short utterances
-        if (silenceDetected && this.totalSamples > 0) {
+        // 2. Silence detected ONLY if we have minimum audio first
+        // This prevents sending just silence/noise
+        if (silenceDetected && hasMinAudio) {
             const silenceDuration = Date.now() - this.lastAudioTime;
             console.log(`[AudioProcessor] ${this.ucid}: Silence detected (${silenceDuration}ms quiet) after ${duration}ms audio - sending`);
             return true;
         }
         
-        // 3. Have sufficient audio (legacy behavior for continuous speech)
-        if (hasMinAudio) {
-            console.log(`[AudioProcessor] ${this.ucid}: Min duration reached (${duration}ms) - sending`);
-            return true;
+        // 3. Don't send if only silence detected without min audio
+        if (silenceDetected && !hasMinAudio) {
+            console.log(`[AudioProcessor] ${this.ucid}: Silence detected but insufficient audio (${duration}ms < ${this.config.minAudioDuration}ms) - NOT sending`);
+            return false;
         }
         
         return false;
