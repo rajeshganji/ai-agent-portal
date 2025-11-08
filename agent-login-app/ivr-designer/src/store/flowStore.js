@@ -176,13 +176,43 @@ export const useFlowStore = create((set, get) => ({
   })),
   
   // Clear flow
-  clearFlow: () => set({
-    nodes: [],
-    edges: [],
-    selectedNode: null,
-    flowName: 'Untitled Flow',
-    flowId: null,
-  }),
+  clearFlow: () => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('🧹 [FlowStore] Clearing flow completely');
+    }
+    set({
+      nodes: [],
+      edges: [],
+      selectedNode: null,
+      flowName: 'Untitled Flow',
+      flowId: null,
+      // Also clear editing state
+      nodeBeingEdited: null,
+      isEditingMode: false,
+      blockCanvasInteractions: false,
+    });
+  },
+  
+  // Create fresh new flow with generated ID
+  createNewFlow: () => {
+    const state = get();
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (state.debugMode) {
+      console.log('🆕 [FlowStore] Creating fresh new flow with temp ID:', tempId);
+    }
+    set({
+      nodes: [],
+      edges: [],
+      selectedNode: null,
+      flowName: 'Untitled Flow',
+      flowId: tempId, // Generate temporary ID that will be replaced by server
+      nodeBeingEdited: null,
+      isEditingMode: false,
+      blockCanvasInteractions: false,
+    });
+    return tempId;
+  },
   
   // Load flow
   loadFlow: (flow) => set({

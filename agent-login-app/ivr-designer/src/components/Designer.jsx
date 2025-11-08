@@ -20,7 +20,8 @@ function Designer() {
     nodes: storeNodes,
     edges: storeEdges,
     loadFlow, 
-    clearFlow, 
+    clearFlow,
+    createNewFlow,
     getFlowJSON,
     setFlowId 
   } = useFlowStore();
@@ -170,13 +171,24 @@ function Designer() {
       
       const result = await response.json();
       console.log('✅ [Designer] Save successful:', result);
+      console.log('🔍 [Designer] Checking result structure:', {
+        hasId: !!result.id,
+        hasFlowId: !!result.flow?.id,
+        resultId: result.id,
+        flowId: result.flow?.id,
+        fullResult: result
+      });
       
-      if (!currentFlowId && result.id) {
+      // 🚨 FIX: API returns { success: true, id: flowId, flow } structure
+      const newFlowId = result.id || result.flow?.id;
+      console.log('🆔 [Designer] Extracted flow ID:', newFlowId);
+      
+      if (!currentFlowId && newFlowId) {
         // Set the new flow ID for future saves
-        console.log('🆔 [Designer] Setting new flow ID:', result.id);
-        setFlowId(result.id);
+        console.log('🆔 [Designer] Setting new flow ID for store:', newFlowId);
+        setFlowId(newFlowId);
         // Update URL to include the flow ID - FIXED PATH
-        const newPath = `/designer/${result.id}`;
+        const newPath = `/designer/${newFlowId}`;
         console.log('🔄 [Designer] Navigating to:', newPath);
         navigate(newPath, { replace: true });
       }
@@ -206,6 +218,36 @@ function Designer() {
   const handleBackToFlows = () => {
     console.log('🔙 [Designer] Navigating back to flows list');
     navigate('/flows');
+  };
+
+  const handleClearStorage = () => {
+    if (window.confirm('🚨 CLEAR ALL STORAGE?\n\nThis will:\n• Clear the current flow\n• Reset all cached data\n• Create a fresh new flow\n\nThis cannot be undone!')) {
+      console.log('🧹 [Designer] CLEARING ALL STORAGE AND CACHE');
+      
+      // Clear browser storage
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log('✅ [Designer] Browser storage cleared');
+      } catch (e) {
+        console.warn('⚠️ [Designer] Could not clear browser storage:', e);
+      }
+      
+      // Create fresh new flow
+      const newTempId = createNewFlow();
+      console.log('🆕 [Designer] Created fresh flow with temp ID:', newTempId);
+      
+      // Navigate to new flow path
+      const newPath = '/designer';
+      console.log('🔄 [Designer] Navigating to fresh designer:', newPath);
+      navigate(newPath, { replace: true });
+      
+      // Reload page to ensure clean state
+      setTimeout(() => {
+        console.log('🔄 [Designer] Reloading page for clean state');
+        window.location.reload();
+      }, 500);
+    }
   };
 
   if (loading) {
@@ -279,6 +321,16 @@ function Designer() {
         
         <div className="flex items-center space-x-3">
           <Toolbar />
+          
+          {/* 🧹 CLEAR STORAGE BUTTON */}
+          <button
+            onClick={handleClearStorage}
+            className="flex items-center space-x-2 bg-red-500/20 text-red-300 px-3 py-2 rounded-lg hover:bg-red-500/30 border border-red-400/30 transition-all"
+            title="Clear all storage and create fresh flow"
+          >
+            <span className="text-sm">🧹</span>
+            <span className="text-xs">Clear Storage</span>
+          </button>
           
           {/* Debug info display */}
           <div className="text-xs bg-black/30 p-2 rounded text-white">
