@@ -28,15 +28,22 @@ const implementation = new DOMImplementation();
 
 class Response {
     constructor(sid = null) {
+        const constructorTimestamp = new Date().toISOString();
+        console.log(`[Response] ${constructorTimestamp} - 🏗️  Creating new Response object`);
+        console.log(`[Response] SID: ${sid || 'NOT PROVIDED'}`);
+        
         this.doc = implementation.createDocument(null, 'response', null);
         this.response = this.doc.documentElement;
         
         if (sid) {
             this.setSid(sid);
         }
+        
+        console.log(`[Response] ${new Date().toISOString()} - ✅ Response object initialized`);
     }
 
     setSid(sid) {
+        console.log(`[Response] ${new Date().toISOString()} - 🔖 Setting SID: ${sid}`);
         this.response.setAttribute('sid', sid);
     }
 
@@ -45,6 +52,8 @@ class Response {
     }
 
     addPlayText(text, speed = 2, lang = 'EN', quality = 'best') {
+        console.log(`[Response] ${new Date().toISOString()} - 🔊 Adding PlayText: "${text}" (speed=${speed}, lang=${lang})`);
+        
         const playText = this.doc.createElement('playtext');
         playText.textContent = text;
         playText.setAttribute('lang', lang);
@@ -65,8 +74,12 @@ class Response {
     }
 
     addHangup() {
+        console.log(`[Response] ${new Date().toISOString()} - ☎️  Adding Hangup command`);
+        
         const hangup = this.doc.createElement('hangup');
         this.response.appendChild(hangup);
+        
+        console.log(`[Response] ${new Date().toISOString()} - ✅ Hangup element added to XML`);
     }
 
     addDial(no, options = {}) {
@@ -172,25 +185,46 @@ class Response {
     }
 
     addStream(streamNumber, wsurl, record = 'false') {
+        console.log(`[Response] ${new Date().toISOString()} - 📡 Adding Stream: number="${streamNumber}", wsurl="${wsurl}", record=${record}`);
+        
         const stream = this.doc.createElement('stream');
         stream.textContent = streamNumber;
         stream.setAttribute("is_sip", "true");
         stream.setAttribute("url", wsurl);
         stream.setAttribute('record', record);
         this.response.appendChild(stream);
+        
+        console.log(`[Response] ${new Date().toISOString()} - ✅ Stream element added to XML`);
     }
 
     getXML() {
+        const xmlTimestamp = new Date().toISOString();
         const serializer = new XMLSerializer();
-        return serializer.serializeToString(this.doc);
+        const xmlString = serializer.serializeToString(this.doc);
+        
+        console.log(`[Response] ${xmlTimestamp} - 📝 XML Serialization completed:`);
+        console.log(`[Response] XML Length: ${xmlString.length} characters`);
+        console.log(`[Response] =============== GENERATED XML ===============`);
+        console.log(xmlString);
+        console.log(`[Response] ============== END XML OUTPUT ==============`);
+        
+        return xmlString;
     }
 
     send(res) {
+        const sendTimestamp = new Date().toISOString();
+        const xmlContent = this.getXML();
+        
+        console.log(`[Response] ${sendTimestamp} - 📤 Sending XML response to client`);
+        console.log(`[Response] Content-Type: text/xml`);
+        console.log(`[Response] Content-Length: ${xmlContent.length} bytes`);
+        
         if (res) {
             res.set('Content-Type', 'text/xml');
-            res.send(this.getXML());
+            res.send(xmlContent);
+            console.log(`[Response] ${new Date().toISOString()} - ✅ XML response sent successfully`);
         }
-        return this.getXML();
+        return xmlContent;
     }
 }
 

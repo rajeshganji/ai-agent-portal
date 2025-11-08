@@ -11,13 +11,31 @@ function setAgentConnections(connections) {
 
 // AI-Powered IVR Flow Handler with OpenAI - Public API
 router.get('/ivrflow', async (req, res) => {
-    console.log('[IVR] Incoming call parameters:', req.query);
+    const requestTimestamp = new Date().toISOString();
+    const requestStartTime = Date.now();
+    
+    console.log(`[PBX] ==================== INCOMING IVR REQUEST ====================`);
+    console.log(`[PBX] ${requestTimestamp} - New IVR request received`);
+    console.log(`[PBX] Method: ${req.method}`);
+    console.log(`[PBX] URL: ${req.originalUrl}`);
+    console.log(`[PBX] Query Parameters:`, JSON.stringify(req.query, null, 2));
+    console.log(`[PBX] Headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`[PBX] User-Agent: ${req.headers['user-agent'] || 'N/A'}`);
+    console.log(`[PBX] Remote IP: ${req.ip || req.connection.remoteAddress || 'Unknown'}`);
+    console.log(`[PBX] =============================================================`);
     
     try {
         // Extract call parameters
         const callId = req.query.sid || req.query.cid || `call_${Date.now()}`;
         const event = req.query.event || 'NewCall';
         const data = req.query.data || req.query;
+        
+        console.log(`[PBX] ${new Date().toISOString()} - 🔄 Processing call parameters:`);
+        console.log(`[PBX] - Call ID: ${callId}`);
+        console.log(`[PBX] - Event: ${event}`);
+        console.log(`[PBX] - Data:`, JSON.stringify(data, null, 2));
+        
+        console.log(`[PBX] ${new Date().toISOString()} - 🤖 Executing flow engine...`);
         
         // Use flow engine with OpenAI integration
         const xmlResponse = await flowEngine.executeTestFlow({
@@ -26,14 +44,35 @@ router.get('/ivrflow', async (req, res) => {
             data
         });
         
+        const processingDuration = Date.now() - requestStartTime;
+        
+        console.log(`[PBX] ${new Date().toISOString()} - ✅ Flow engine completed in ${processingDuration}ms`);
+        console.log(`[PBX] ==================== OUTGOING XML RESPONSE ====================`);
+        console.log(`[PBX] Response Timestamp: ${new Date().toISOString()}`);
+        console.log(`[PBX] Response Size: ${xmlResponse.length} characters`);
+        console.log(`[PBX] Processing Duration: ${processingDuration}ms`);
+        console.log(`[PBX] XML Response Body:`);
+        console.log(xmlResponse);
+        console.log(`[PBX] ====================== END XML RESPONSE =====================`);
+        
         // Send XML response
         res.set('Content-Type', 'text/xml');
         res.send(xmlResponse);
         
+        console.log(`[PBX] ${new Date().toISOString()} - 📤 XML response sent successfully`);
+        
     } catch (error) {
-        console.error('[IVR] Error processing flow:', error);
+        const errorTimestamp = new Date().toISOString();
+        const errorDuration = Date.now() - requestStartTime;
+        
+        console.error(`[PBX] ${errorTimestamp} - ❌ ERROR in flow processing after ${errorDuration}ms:`);
+        console.error(`[PBX] Error message: ${error.message}`);
+        console.error(`[PBX] Error stack:`, error.stack);
+        console.error(`[PBX] Request details - Call ID: ${req.query.sid}, Event: ${req.query.event}`);
         
         // Fallback to basic IVR
+        console.log(`[PBX] ${new Date().toISOString()} - 🔄 Falling back to basic IVR flow...`);
+        
         const ivrFlow = new IVRFlow({
             sid: req.query.sid,
             event: req.query.event,
@@ -41,6 +80,8 @@ router.get('/ivrflow', async (req, res) => {
         });
         
         const response = ivrFlow.processFlow();
+        
+        console.log(`[PBX] ${new Date().toISOString()} - 📤 Sending fallback IVR response`);
         response.send(res);
     }
 });
