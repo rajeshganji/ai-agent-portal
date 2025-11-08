@@ -54,164 +54,235 @@ function Designer() {
       // New flow
       clearFlow();
     }
+    
+    // 🛡️ SUPPRESS CHROME EXTENSION ERRORS - these are harmless
+    const originalError = console.error;
+    console.error = (...args) => {
+      const message = args[0];
+      if (typeof message === 'string' && 
+          (message.includes('postMessage') || 
+           message.includes('chrome-extension') ||
+           message.includes('target origin provided'))) {
+        // Suppress Chrome extension postMessage errors - these are harmless
+        return;
+      }
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      // Restore original console.error on cleanup
+      console.error = originalError;
+    };
   }, [flowId, loadExistingFlow, clearFlow]);
 
   const handleSaveFlow = async () => {
-    console.log('🚨 [Designer] ===== SAVE FLOW BUTTON CLICKED =====');
-    console.log('🚨 [Designer] Button state check:', {
-      saving,
-      disabled: saving
-    });
+    // 🚨 FORCE MAXIMUM LOGGING - CANNOT BE MISSED
+    console.log('');
+    console.log('🚨🚨🚨🚨🚨 SAVE FLOW BUTTON CLICKED 🚨🚨🚨🚨🚨');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.log('🔘 Button element:', document.querySelector('#save-button'));
+    console.log('🔘 Button disabled state:', document.querySelector('#save-button')?.disabled);
+    console.log('🔘 Current saving state:', saving);
+    console.log('');
     
     if (saving) {
-      console.log('🚫 [Designer] Already saving, ignoring click');
+      console.log('❌❌❌ ALREADY SAVING - BUTTON SHOULD BE DISABLED ❌❌❌');
       return;
     }
     
     try {
       setSaving(true);
-      console.log('🔄 [Designer] Setting saving state to TRUE');
+      console.log('✅ Setting saving=true successful');
       
-      console.log('🚨 [Designer] Store state before getFlowJSON:', {
-        currentFlowId,
-        'store.flowId': currentFlowId,
-        'store.flowName': flowName,
-        'store.nodes': storeNodes?.length || 'undefined',
-        'store.edges': storeEdges?.length || 'undefined'
-      });
+      // 🔍 STORE STATE DEEP INSPECTION
+      console.log('📊📊📊 STORE STATE ANALYSIS 📊📊📊');
+      console.log('• currentFlowId:', currentFlowId);
+      console.log('• typeof currentFlowId:', typeof currentFlowId);
+      console.log('• currentFlowId === null:', currentFlowId === null);
+      console.log('• currentFlowId === undefined:', currentFlowId === undefined);
+      console.log('• flowName:', flowName);
+      console.log('• storeNodes length:', storeNodes?.length);
+      console.log('• storeNodes type:', typeof storeNodes);
+      console.log('• storeNodes array:', Array.isArray(storeNodes));
+      console.log('• storeEdges length:', storeEdges?.length);
+      console.log('• storeEdges type:', typeof storeEdges);
+      console.log('• storeEdges array:', Array.isArray(storeEdges));
+      console.log('');
       
-      const flowData = getFlowJSON();
+      // 🎯 CALL getFlowJSON WITH ERROR CATCHING
+      let flowData;
+      try {
+        console.log('🔄 Calling getFlowJSON()...');
+        flowData = getFlowJSON();
+        console.log('✅ getFlowJSON() returned successfully');
+        console.log('🎯 Flow data type:', typeof flowData);
+        console.log('🎯 Flow data keys:', Object.keys(flowData || {}));
+      } catch (getFlowError) {
+        console.error('❌❌❌ getFlowJSON() FAILED ❌❌❌');
+        console.error('Error details:', getFlowError);
+        console.error('Error stack:', getFlowError.stack);
+        throw new Error(`getFlowJSON failed: ${getFlowError.message}`);
+      }
       
-      console.log('🔄 [Designer] ===== FLOW SAVE ATTEMPT =====');
-      console.log('🔄 [Designer] Flow data extracted:', {
-        hasFlowId: !!flowData.id,
-        flowId: flowData.id,
-        flowName: flowData.name,
-        nodeCount: flowData.nodes?.length || 0,
-        edgeCount: flowData.edges?.length || 0,
-        hasNodes: Array.isArray(flowData.nodes),
-        hasEdges: Array.isArray(flowData.edges)
-      });
+      // 🔍 FLOW DATA DEEP ANALYSIS
+      console.log('🔍🔍🔍 FLOW DATA ANALYSIS 🔍🔍🔍');
+      console.log('• flowData.id:', flowData.id);
+      console.log('• flowData.name:', flowData.name);
+      console.log('• flowData.nodes length:', flowData.nodes?.length);
+      console.log('• flowData.edges length:', flowData.edges?.length);
+      console.log('• flowData.nodes type:', typeof flowData.nodes);
+      console.log('• flowData.edges type:', typeof flowData.edges);
+      console.log('• flowData.createdAt:', flowData.createdAt);
+      console.log('• Full flowData:', JSON.stringify(flowData, null, 2));
+      console.log('');
       
-      console.log('🔍 [Designer] Full nodes array:', flowData.nodes);
-      console.log('🔍 [Designer] Full edges array:', flowData.edges);
-      
-      // Check if we have any data to save
+      // 🚨 FORCE ERROR IF NO NODES
       if (!flowData.nodes || flowData.nodes.length === 0) {
-        console.warn('⚠️ [Designer] WARNING: No nodes to save - flow appears empty!');
-        console.warn('⚠️ [Designer] This might be why save is failing');
-        // Don't block save - let user save empty flow if they want
+        console.warn('⚠️⚠️⚠️ WARNING: Empty flow being saved!');
+        console.warn('This might be the root cause of save failure');
+        // Don't throw error - let empty flows save for testing
       }
       
-      // Check flow name
-      if (!flowData.name || flowData.name.trim() === '' || flowData.name === 'Untitled Flow') {
-        console.warn('⚠️ [Designer] WARNING: Flow has default/empty name:', flowData.name);
+      // 🎯 VALIDATED DATA CREATION WITH ERROR CHECKING
+      let validatedFlowData;
+      try {
+        validatedFlowData = {
+          ...flowData,
+          name: flowData.name || 'Untitled Flow',
+          nodes: flowData.nodes || [],
+          edges: flowData.edges || []
+        };
+        console.log('✅ Validated flow data created successfully');
+        console.log('📄 Final payload size:', JSON.stringify(validatedFlowData).length, 'characters');
+      } catch (validationError) {
+        console.error('❌❌❌ VALIDATION FAILED ❌❌❌');
+        console.error('Validation error:', validationError);
+        throw new Error(`Flow validation failed: ${validationError.message}`);
       }
       
-      // Ensure we have a minimum valid flow structure
-      const validatedFlowData = {
-        ...flowData,
-        name: flowData.name || 'Untitled Flow',
-        nodes: flowData.nodes || [],
-        edges: flowData.edges || []
-      };
-      
-      console.log('✅ [Designer] Validated flow data:', validatedFlowData);
-      
-      // Determine if this is new flow or update
+      // 🌐 API CALL WITH MAXIMUM ERROR DETECTION
+      console.log('🌐🌐🌐 API CALL ATTEMPT 🌐🌐🌐');
       const isNewFlow = !currentFlowId || currentFlowId === null || currentFlowId === undefined;
-      console.log('🤔 [Designer] Flow type determination:', {
-        currentFlowId,
-        isNewFlow,
-        willCreateNew: isNewFlow,
-        willUpdate: !isNewFlow
-      });
+      console.log('• Is new flow:', isNewFlow);
+      console.log('• Will use POST:', isNewFlow);
+      console.log('• Will use PUT:', !isNewFlow);
       
       let response;
       let url;
+      let method;
       
-      if (currentFlowId) {
-        // Update existing flow
-        url = `/api/ivr/designer/flows/${currentFlowId}`;
-        console.log('📝 [Designer] Updating existing flow:', currentFlowId);
-        console.log('📝 [Designer] PUT URL:', url);
-        console.log('📝 [Designer] PUT Data:', JSON.stringify(validatedFlowData, null, 2));
+      try {
+        if (currentFlowId) {
+          url = `/api/ivr/designer/flows/${currentFlowId}`;
+          method = 'PUT';
+          console.log('📝 UPDATE: URL =', url);
+        } else {
+          url = '/api/ivr/designer/flows';
+          method = 'POST';
+          console.log('🆕 CREATE: URL =', url);
+        }
+        
+        console.log('� Making', method, 'request to:', url);
+        console.log('� Request headers: Content-Type: application/json');
+        console.log('📤 Request body preview:', JSON.stringify(validatedFlowData, null, 2).substring(0, 500) + '...');
         
         response = await fetch(url, {
-          method: 'PUT',
+          method: method,
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(validatedFlowData)
         });
-      } else {
-        // Create new flow
-        url = '/api/ivr/designer/flows';
-        console.log('🆕 [Designer] Creating new flow');
-        console.log('🆕 [Designer] POST URL:', url);
-        console.log('🆕 [Designer] POST Data:', JSON.stringify(validatedFlowData, null, 2));
         
-        response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(validatedFlowData)
-        });
+        console.log('📥 Response received!');
+        console.log('📥 Response status:', response.status);
+        console.log('📥 Response statusText:', response.statusText);
+        console.log('📥 Response ok:', response.ok);
+        console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+        
+      } catch (fetchError) {
+        console.error('❌❌❌ FETCH REQUEST FAILED ❌❌❌');
+        console.error('Fetch error type:', fetchError.constructor.name);
+        console.error('Fetch error message:', fetchError.message);
+        console.error('Fetch error stack:', fetchError.stack);
+        console.error('URL attempted:', url);
+        console.error('Method attempted:', method);
+        throw new Error(`Network request failed: ${fetchError.message}`);
       }
       
-      console.log('🌐 [Designer] API Response status:', response.status);
-      console.log('🌐 [Designer] API Response headers:', Object.fromEntries(response.headers.entries()));
-      
+      // 🔍 RESPONSE ANALYSIS
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ [Designer] Save failed:', response.status, errorText);
-        throw new Error(`Failed to save flow: ${response.status} ${errorText}`);
+        console.error('❌❌❌ API RESPONSE NOT OK ❌❌❌');
+        console.error('Status:', response.status);
+        console.error('Status text:', response.statusText);
+        
+        let errorText;
+        try {
+          errorText = await response.text();
+          console.error('Error response body:', errorText);
+        } catch (textError) {
+          console.error('Could not read error response:', textError);
+          errorText = 'Could not read error response';
+        }
+        
+        throw new Error(`API Error ${response.status}: ${errorText}`);
       }
       
-      const result = await response.json();
-      console.log('✅ [Designer] Save successful:', result);
-      console.log('🔍 [Designer] Checking result structure:', {
-        hasId: !!result.id,
-        hasFlowId: !!result.flow?.id,
-        resultId: result.id,
-        flowId: result.flow?.id,
-        fullResult: result
-      });
+      // 🎯 SUCCESS RESPONSE PARSING
+      let result;
+      try {
+        console.log('📄 Parsing JSON response...');
+        result = await response.json();
+        console.log('✅ JSON parsed successfully');
+        console.log('🎉🎉🎉 API CALL SUCCESSFUL 🎉🎉🎉');
+        console.log('� Full result:', JSON.stringify(result, null, 2));
+      } catch (jsonError) {
+        console.error('❌❌❌ JSON PARSING FAILED ❌❌❌');
+        console.error('JSON error:', jsonError);
+        const responseText = await response.text();
+        console.error('Raw response:', responseText);
+        throw new Error(`Invalid JSON response: ${jsonError.message}`);
+      }
       
-      // 🚨 FIX: API returns { success: true, id: flowId, flow } structure
+      // 🆔 ID EXTRACTION WITH ERROR CHECKING
+      console.log('🆔🆔🆔 FLOW ID EXTRACTION 🆔🆔🆔');
+      console.log('• result.id:', result.id);
+      console.log('• result.flow:', result.flow);
+      console.log('• result.flow?.id:', result.flow?.id);
+      
       const newFlowId = result.id || result.flow?.id;
-      console.log('🆔 [Designer] Extracted flow ID:', newFlowId);
+      console.log('• Extracted newFlowId:', newFlowId);
+      console.log('• newFlowId type:', typeof newFlowId);
       
       if (!currentFlowId && newFlowId) {
-        // Set the new flow ID for future saves
-        console.log('🆔 [Designer] Setting new flow ID for store:', newFlowId);
+        console.log('🔄 Setting new flow ID in store:', newFlowId);
         setFlowId(newFlowId);
-        // Update URL to include the flow ID - FIXED PATH
+        
         const newPath = `/designer/${newFlowId}`;
-        console.log('🔄 [Designer] Navigating to:', newPath);
+        console.log('🔄 Navigating to:', newPath);
         navigate(newPath, { replace: true });
+        console.log('✅ Navigation completed');
       }
       
-      console.log('🎉 [Designer] ===== FLOW SAVE COMPLETED =====');
+      console.log('🎊🎊� SAVE FLOW COMPLETED SUCCESSFULLY 🎊🎊🎊');
+      console.log('');
       
-      console.log('Flow saved successfully:', result);
-      
-      // Show success feedback
-      const saveButton = document.querySelector('#save-button');
-      if (saveButton) {
-        const originalContent = saveButton.innerHTML;
-        saveButton.innerHTML = '<span class="flex items-center space-x-2"><svg class="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span>Saved!</span></span>';
-        setTimeout(() => {
-          saveButton.innerHTML = originalContent;
-        }, 2000);
-      }
+      // 🎯 VISUAL SUCCESS FEEDBACK
+      alert(`✅ Flow saved successfully!\nFlow ID: ${newFlowId || currentFlowId}\nNodes: ${flowData.nodes?.length || 0}`);
       
     } catch (err) {
-      alert('Error saving flow: ' + err.message);
-      console.error('Error saving flow:', err);
+      console.error('');
+      console.error('💥💥💥💥💥 SAVE FLOW FAILED 💥💥💥💥💥');
+      console.error('Error type:', err.constructor.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
+      console.error('Timestamp:', new Date().toISOString());
+      console.error('');
+      
+      alert(`❌ SAVE FAILED!\n\nError: ${err.message}\n\nCheck console for full details.`);
     } finally {
       setSaving(false);
+      console.log('✅ Reset saving=false');
     }
   };
 

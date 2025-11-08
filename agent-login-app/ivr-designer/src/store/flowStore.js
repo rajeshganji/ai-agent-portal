@@ -225,25 +225,91 @@ export const useFlowStore = create((set, get) => ({
   // Get flow JSON
   getFlowJSON: () => {
     const state = get();
-    const flowData = {
-      id: state.flowId,
-      name: state.flowName,
-      nodes: state.nodes,
-      edges: state.edges,
-      createdAt: new Date().toISOString(),
-    };
     
-    if (state.debugMode) {
-      console.log('📄 [FlowStore] getFlowJSON called:', {
-        flowId: state.flowId,
-        flowName: state.flowName,
-        nodeCount: state.nodes?.length || 0,
-        edgeCount: state.edges?.length || 0,
-        isEditingMode: state.isEditingMode,
-        blockCanvasInteractions: state.blockCanvasInteractions
+    // 🚨 MAXIMUM LOGGING FOR getFlowJSON
+    console.log('');
+    console.log('📄📄📄 getFlowJSON() CALLED 📄📄📄');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    console.log('🔍 Raw state inspection:');
+    console.log('• state.flowId:', state.flowId, '(type:', typeof state.flowId, ')');
+    console.log('• state.flowName:', state.flowName, '(type:', typeof state.flowName, ')');
+    console.log('• state.nodes:', state.nodes, '(type:', typeof state.nodes, ')');
+    console.log('• state.edges:', state.edges, '(type:', typeof state.edges, ')');
+    console.log('• state.nodes?.length:', state.nodes?.length);
+    console.log('• state.edges?.length:', state.edges?.length);
+    console.log('• Array.isArray(state.nodes):', Array.isArray(state.nodes));
+    console.log('• Array.isArray(state.edges):', Array.isArray(state.edges));
+    
+    if (state.nodes && state.nodes.length > 0) {
+      console.log('🎯 First few nodes details:');
+      state.nodes.slice(0, 3).forEach((node, index) => {
+        console.log(`  Node ${index}:`, {
+          id: node.id,
+          type: node.type,
+          position: node.position,
+          data: node.data
+        });
       });
-      console.log('📄 [FlowStore] Full flow data:', flowData);
+    } else {
+      console.log('⚠️ NO NODES IN STATE!');
     }
+    
+    if (state.edges && state.edges.length > 0) {
+      console.log('� First few edges details:');
+      state.edges.slice(0, 3).forEach((edge, index) => {
+        console.log(`  Edge ${index}:`, {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target
+        });
+      });
+    } else {
+      console.log('⚠️ NO EDGES IN STATE!');
+    }
+    
+    // 🎯 BUILD FLOW DATA WITH ERROR CHECKING
+    let flowData;
+    try {
+      flowData = {
+        id: state.flowId,
+        name: state.flowName,
+        nodes: state.nodes,
+        edges: state.edges,
+        createdAt: new Date().toISOString(),
+      };
+      console.log('✅ Flow data object created successfully');
+    } catch (buildError) {
+      console.error('❌ Error building flow data object:', buildError);
+      throw buildError;
+    }
+    
+    // 🔍 FINAL VALIDATION
+    console.log('🔍 Final flow data validation:');
+    console.log('• flowData.id:', flowData.id);
+    console.log('• flowData.name:', flowData.name);
+    console.log('• flowData.nodes length:', flowData.nodes?.length || 'undefined');
+    console.log('• flowData.edges length:', flowData.edges?.length || 'undefined');
+    console.log('• flowData.createdAt:', flowData.createdAt);
+    
+    // 🚨 DEEP OBJECT INSPECTION
+    console.log('🚨 DEEP FLOW DATA OBJECT:');
+    try {
+      const jsonString = JSON.stringify(flowData, null, 2);
+      console.log('• JSON serialization successful, length:', jsonString.length);
+      console.log('• First 500 chars:', jsonString.substring(0, 500));
+      if (jsonString.length > 500) {
+        console.log('• ... (truncated, full object in next log)');
+      }
+      console.log('• Full flowData object:', flowData);
+    } catch (jsonError) {
+      console.error('❌ JSON serialization failed:', jsonError);
+      console.error('This might be the issue - circular reference or invalid data');
+      throw new Error('Flow data cannot be serialized: ' + jsonError.message);
+    }
+    
+    console.log('✅ getFlowJSON() returning data successfully');
+    console.log('📄📄📄 getFlowJSON() COMPLETED 📄📄📄');
+    console.log('');
     
     return flowData;
   },
