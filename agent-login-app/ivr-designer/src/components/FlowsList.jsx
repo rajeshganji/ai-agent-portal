@@ -15,15 +15,19 @@ function FlowsList() {
   const loadFlows = async () => {
     try {
       setLoading(true);
+      console.log('Loading flows from API...');
       const response = await fetch('/api/ivr/designer/flows');
+      console.log('API Response status:', response.status);
+      
       if (!response.ok) throw new Error('Failed to load flows');
       
       const data = await response.json();
+      console.log('API Response data:', data);
       setFlows(data.flows || []);
       setError(null);
     } catch (err) {
-      setError(err.message);
       console.error('Error loading flows:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -124,9 +128,18 @@ function FlowsList() {
 
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
+        {/* Debug Information */}
+        <div className="text-white text-sm mb-4 p-4 bg-black bg-opacity-50 rounded">
+          <p>Debug: Loading={loading.toString()}, Error={error || 'none'}, FlowsCount={flows.length}</p>
+        </div>
+        
         {flows.length === 0 ? (
           <div className="text-center py-16">
-            <div className="glass-card p-12 rounded-2xl max-w-md mx-auto">
+            <div className="glass-card p-12 rounded-2xl max-w-md mx-auto" style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
               <Boxes className="w-16 h-16 text-gray-400 mx-auto mb-4" />
               <h2 className="text-xl font-bold text-white mb-2">No Flows Yet</h2>
               <p className="text-gray-300 mb-6">
