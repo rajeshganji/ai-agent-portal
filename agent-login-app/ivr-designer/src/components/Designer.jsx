@@ -17,6 +17,8 @@ function Designer() {
   const { 
     flowName, 
     flowId: currentFlowId, 
+    nodes: storeNodes,
+    edges: storeEdges,
     loadFlow, 
     clearFlow, 
     getFlowJSON,
@@ -54,24 +56,75 @@ function Designer() {
   }, [flowId, loadExistingFlow, clearFlow]);
 
   const handleSaveFlow = async () => {
+    console.log('🚨 [Designer] ===== SAVE FLOW BUTTON CLICKED =====');
+    console.log('🚨 [Designer] Button state check:', {
+      saving,
+      disabled: saving
+    });
+    
+    if (saving) {
+      console.log('🚫 [Designer] Already saving, ignoring click');
+      return;
+    }
+    
     try {
       setSaving(true);
+      console.log('🔄 [Designer] Setting saving state to TRUE');
+      
+      console.log('🚨 [Designer] Store state before getFlowJSON:', {
+        currentFlowId,
+        'store.flowId': currentFlowId,
+        'store.flowName': flowName,
+        'store.nodes': storeNodes?.length || 'undefined',
+        'store.edges': storeEdges?.length || 'undefined'
+      });
+      
       const flowData = getFlowJSON();
       
       console.log('🔄 [Designer] ===== FLOW SAVE ATTEMPT =====');
-      console.log('🔄 [Designer] Current state:', {
-        currentFlowId,
+      console.log('🔄 [Designer] Flow data extracted:', {
+        hasFlowId: !!flowData.id,
+        flowId: flowData.id,
         flowName: flowData.name,
         nodeCount: flowData.nodes?.length || 0,
         edgeCount: flowData.edges?.length || 0,
-        nodes: flowData.nodes,
-        edges: flowData.edges
+        hasNodes: Array.isArray(flowData.nodes),
+        hasEdges: Array.isArray(flowData.edges)
       });
+      
+      console.log('🔍 [Designer] Full nodes array:', flowData.nodes);
+      console.log('🔍 [Designer] Full edges array:', flowData.edges);
       
       // Check if we have any data to save
       if (!flowData.nodes || flowData.nodes.length === 0) {
-        console.warn('⚠️ [Designer] No nodes to save - flow appears empty');
+        console.warn('⚠️ [Designer] WARNING: No nodes to save - flow appears empty!');
+        console.warn('⚠️ [Designer] This might be why save is failing');
+        // Don't block save - let user save empty flow if they want
       }
+      
+      // Check flow name
+      if (!flowData.name || flowData.name.trim() === '' || flowData.name === 'Untitled Flow') {
+        console.warn('⚠️ [Designer] WARNING: Flow has default/empty name:', flowData.name);
+      }
+      
+      // Ensure we have a minimum valid flow structure
+      const validatedFlowData = {
+        ...flowData,
+        name: flowData.name || 'Untitled Flow',
+        nodes: flowData.nodes || [],
+        edges: flowData.edges || []
+      };
+      
+      console.log('✅ [Designer] Validated flow data:', validatedFlowData);
+      
+      // Determine if this is new flow or update
+      const isNewFlow = !currentFlowId || currentFlowId === null || currentFlowId === undefined;
+      console.log('🤔 [Designer] Flow type determination:', {
+        currentFlowId,
+        isNewFlow,
+        willCreateNew: isNewFlow,
+        willUpdate: !isNewFlow
+      });
       
       let response;
       let url;
@@ -81,28 +134,28 @@ function Designer() {
         url = `/api/ivr/designer/flows/${currentFlowId}`;
         console.log('📝 [Designer] Updating existing flow:', currentFlowId);
         console.log('📝 [Designer] PUT URL:', url);
-        console.log('📝 [Designer] PUT Data:', JSON.stringify(flowData, null, 2));
+        console.log('📝 [Designer] PUT Data:', JSON.stringify(validatedFlowData, null, 2));
         
         response = await fetch(url, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(flowData)
+          body: JSON.stringify(validatedFlowData)
         });
       } else {
         // Create new flow
         url = '/api/ivr/designer/flows';
         console.log('🆕 [Designer] Creating new flow');
         console.log('🆕 [Designer] POST URL:', url);
-        console.log('🆕 [Designer] POST Data:', JSON.stringify(flowData, null, 2));
+        console.log('🆕 [Designer] POST Data:', JSON.stringify(validatedFlowData, null, 2));
         
         response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(flowData)
+          body: JSON.stringify(validatedFlowData)
         });
       }
       
@@ -226,11 +279,24 @@ function Designer() {
         
         <div className="flex items-center space-x-3">
           <Toolbar />
+          
+          {/* Debug info display */}
+          <div className="text-xs bg-black/30 p-2 rounded text-white">
+            <div>FlowId: {currentFlowId || 'NEW'}</div>
+            <div>Nodes: {storeNodes?.length || 0}</div>
+            <div>Edges: {storeEdges?.length || 0}</div>
+          </div>
+          
           <button
             id="save-button"
-            onClick={handleSaveFlow}
+            onClick={() => {
+              console.log('🚨 [Designer] SAVE BUTTON CLICKED! Event fired');
+              console.log('🚨 [Designer] Current saving state:', saving);
+              handleSaveFlow();
+            }}
             disabled={saving}
             className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ minWidth: '120px' }}
           >
             {saving ? (
               <>

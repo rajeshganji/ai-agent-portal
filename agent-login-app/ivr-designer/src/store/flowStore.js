@@ -26,7 +26,10 @@ export const useFlowStore = create((set, get) => ({
   setNodes: (nodes) => {
     const state = get();
     if (state.debugMode) {
-      console.log('🔄 [FlowStore] Setting nodes:', nodes?.length || 0, 'nodes');
+      console.log('🔄 [FlowStore] setNodes called with:', nodes?.length || 0, 'nodes');
+      if (nodes && nodes.length > 0) {
+        console.log('🔄 [FlowStore] Node IDs:', nodes.map(n => `${n.id}(${n.type})`).join(', '));
+      }
     }
     set({ nodes });
   },
@@ -156,9 +159,15 @@ export const useFlowStore = create((set, get) => ({
   },
   
   // Add node
-  addNode: (node) => set((state) => ({
-    nodes: [...state.nodes, node],
-  })),
+  addNode: (node) => {
+    const state = get();
+    if (state.debugMode) {
+      console.log('➕ [FlowStore] Adding node:', node.id, 'Type:', node.type);
+    }
+    set((state) => ({
+      nodes: [...state.nodes, node],
+    }));
+  },
   
   // Remove node
   removeNode: (nodeId) => set((state) => ({
