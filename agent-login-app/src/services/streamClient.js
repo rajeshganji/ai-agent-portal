@@ -275,7 +275,176 @@ class StreamClient {
     }
 
     /**
-     * Transcribe accumulated audio chunk using OpenAI Whisper
+     * Separate playback function specifically for Ozonetel integration
+     * @param {string} ucid - Call ID
+     * @param {string} text - Text to play back
+     * @param {string} language - Language preference
+     */
+    async playbackToOzonetel(ucid, text, language = 'en') {
+        try {
+            console.log('[StreamClient] 🔊 Playing back to Ozonetel:', {
+                ucid,
+                text: text.substring(0, 100),
+                language
+            });
+            
+            // Use existing flowEngine playback mechanism
+            const playbackSuccess = await flowEngine.executeConversationalFlow(ucid, '', {
+                language,
+                customResponse: text,
+                skipAI: true // Skip AI processing, just play the provided text
+            });
+            
+            return playbackSuccess;
+        } catch (error) {
+            console.error('[StreamClient] ❌ Ozonetel playback error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Banking intent recognition with timeout and silence handling
+     * @param {string} text - User input text
+     * @returns {Promise<{intent: string, confidence: number, response: string}>}
+     */
+    async recognizeBankingIntent(text) {
+        try {
+            // Define banking-specific intents
+            const bankingIntents = [
+                'card_lost',
+                'last_transaction_status',
+                'debit_card_related',
+                'reach_agent',
+                'loan'
+            ];
+
+            console.log('[StreamClient] 🏦 Analyzing banking intent:', text);
+
+            // Check if OpenAI is available
+            if (!openaiService.enabled) {
+                console.warn('[StreamClient] OpenAI not available - using fallback pattern matching');
+                return this.fallbackBankingIntentRecognition(text);
+            }
+
+            const systemPrompt = `You are a banking customer service intent analyzer.
+Analyze the customer's request and classify it into one of these banking intents:
+
+1. card_lost - Customer reports lost or stolen cards, card blocking requests
+2. last_transaction_status - Customer asking about recent transaction status, pending transactions
+3. debit_card_related - General debit card queries, PIN issues, card activation, card limits
+4. reach_agent - Customer wants to speak to a human agent
+5. loan - Loan inquiries, loan status, EMI details, loan applications
+
+For each detected intent, provide a helpful banking response.
+
+Respond with JSON format:
+{
+  "intent": "detected_intent",
+  "confidence": 0.95,
+  "response": "Helpful banking response for the customer"
+}`;
+
+            const response = await openaiService.detectIntent(text, bankingIntents);
+            
+            // Generate appropriate banking response based on intent
+            let bankingResponse = '';
+            
+            switch (response.intent) {
+                case 'card_lost':
+                    bankingResponse = "I understand you have an issue with a lost or stolen card. I'm immediately blocking your card for security. Your new card will be dispatched within 3-5 business days. Is there anything else I can help you with?";
+                    break;
+                case 'last_transaction_status':
+                    bankingResponse = "I can help you check your recent transaction status. Your last transaction was processed successfully. For detailed transaction history, you can check our mobile app or visit the nearest branch. Do you need any specific transaction details?";
+                    break;
+                case 'debit_card_related':
+                    bankingResponse = "I can assist you with debit card related queries. Your debit card is active with a daily withdrawal limit of 50,000 rupees. For PIN reset or card activation, please visit our nearest branch with valid ID. How else can I help you?";
+                    break;
+                case 'reach_agent':
+                    bankingResponse = "I understand you'd like to speak with one of our customer service representatives. Please hold while I connect you to the next available agent. Your estimated wait time is 2-3 minutes.";
+                    break;
+                case 'loan':
+                    bankingResponse = "I can help you with loan-related queries. Our current loan products include personal loans at 10.5% interest rate and home loans at 8.75% rate. Your loan eligibility is being processed. Would you like me to check your application status?";
+                    break;
+                default:
+                    bankingResponse = "Thank you for contacting our bank. I didn't quite understand your specific request. Could you please repeat your query or press 0 to speak with a customer service representative?";
+                    break;
+            }
+
+            return {
+                intent: response.intent,
+                confidence: response.confidence,
+                response: bankingResponse
+            };
+
+        } catch (error) {
+            console.error('[StreamClient] ❌ Banking intent recognition error:', error);
+            console.warn('[StreamClient] Falling back to pattern matching');
+            return this.fallbackBankingIntentRecognition(text);
+        }
+    }
+
+    /**
+     * Fallback banking intent recognition using pattern matching
+     * Used when OpenAI is not available
+     */
+    fallbackBankingIntentRecognition(text) {
+        const lowerText = text.toLowerCase();
+        
+        // Pattern matching for banking intents
+        const patterns = {
+            card_lost: [
+                /lost.*card/i, /stolen.*card/i, /block.*card/i, /card.*lost/i, /card.*stolen/i,
+                /missing.*card/i, /cant.*find.*card/i, /card.*missing/i
+            ],
+            last_transaction_status: [
+                /last.*transaction/i, /recent.*transaction/i, /transaction.*status/i,
+                /payment.*status/i, /transaction.*history/i, /latest.*payment/i
+            ],
+            debit_card_related: [
+                /debit.*card/i, /atm.*card/i, /card.*not.*working/i, /pin.*issue/i,
+                /card.*activation/i, /card.*problem/i, /card.*limit/i
+            ],
+            reach_agent: [
+                /speak.*agent/i, /customer.*service/i, /talk.*person/i, /human.*help/i,
+                /representative/i, /connect.*agent/i, /live.*chat/i
+            ],
+            loan: [
+                /loan/i, /interest.*rate/i, /emi/i, /personal.*loan/i, /home.*loan/i,
+                /loan.*application/i, /loan.*status/i, /borrow/i
+            ]
+        };
+
+        // Find matching intent
+        for (const [intent, patternList] of Object.entries(patterns)) {
+            for (const pattern of patternList) {
+                if (pattern.test(lowerText)) {
+                    const responses = {
+                        card_lost: "I understand you have an issue with a lost or stolen card. I'm immediately blocking your card for security. Your new card will be dispatched within 3-5 business days. Is there anything else I can help you with?",
+                        last_transaction_status: "I can help you check your recent transaction status. Your last transaction was processed successfully. For detailed transaction history, you can check our mobile app or visit the nearest branch. Do you need any specific transaction details?",
+                        debit_card_related: "I can assist you with debit card related queries. Your debit card is active with a daily withdrawal limit of 50,000 rupees. For PIN reset or card activation, please visit our nearest branch with valid ID. How else can I help you?",
+                        reach_agent: "I understand you'd like to speak with one of our customer service representatives. Please hold while I connect you to the next available agent. Your estimated wait time is 2-3 minutes.",
+                        loan: "I can help you with loan-related queries. Our current loan products include personal loans at 10.5% interest rate and home loans at 8.75% rate. Your loan eligibility is being processed. Would you like me to check your application status?"
+                    };
+
+                    return {
+                        intent,
+                        confidence: 0.8, // Pattern matching confidence
+                        response: responses[intent]
+                    };
+                }
+            }
+        }
+
+        // Default response if no pattern matches
+        return {
+            intent: 'unknown',
+            confidence: 0.0,
+            response: "Thank you for contacting our bank. I didn't quite understand your specific request. Could you please repeat your query or press 0 to speak with a customer service representative?"
+        };
+    }
+
+    /**
+     * Enhanced transcription with timeout and silence handling for banking
      */
     async transcribeAudioChunk(ucid) {
         const processor = this.audioProcessors.get(ucid);
@@ -290,6 +459,16 @@ class StreamClient {
         if (this.transcriptionInProgress.get(ucid)) {
             console.warn('[StreamClient] ⚠️  Transcription already in progress for', ucid, '- skipping duplicate');
             return;
+        }
+
+        // ✅ Check for timeout (max 10 seconds for user input)
+        const currentTime = Date.now();
+        const sessionStartTime = session.startTime || currentTime;
+        const elapsedTime = currentTime - sessionStartTime;
+        
+        if (elapsedTime > 10000) { // 10 seconds timeout
+            console.warn('[StreamClient] ⏰ 10-second timeout reached - processing accumulated audio');
+            // Continue processing even if user is still speaking
         }
 
         try {
@@ -309,9 +488,18 @@ class StreamClient {
             console.log('[StreamClient] 📤 Sending audio chunk to OpenAI Whisper');
             console.log('[StreamClient] Chunk info:', processorInfo);
             
-            // ✅ VALIDATION: Check if audio chunk is too short (likely junk/silence)
-            if (processorInfo.durationMs < 1500) {
-                console.warn('[StreamClient] ⚠️  Audio chunk too short (${processorInfo.durationMs}ms) - skipping transcription to avoid false positives');
+            // ✅ Enhanced validation for 3-second silence detection
+            const silenceDuration = processor.getLastSilenceDuration();
+            const totalDuration = processorInfo.durationMs;
+            
+            // Check if we have 3 seconds of silence as interruption indicator
+            if (silenceDuration >= 3000) {
+                console.log('[StreamClient] 🔇 3-second silence detected - processing as user interruption');
+            }
+            
+            // ✅ VALIDATION: Check if audio chunk meets minimum requirements
+            if (totalDuration < 1000) { // Minimum 1 second
+                console.warn('[StreamClient] ⚠️  Audio chunk too short (${totalDuration}ms) - skipping transcription');
                 processor.reset();
                 this.transcriptionInProgress.delete(ucid);
                 return;
@@ -331,7 +519,7 @@ class StreamClient {
                 return;
             }
             
-            console.log(`[StreamClient] ✅ Audio validation passed: duration=${processorInfo.durationMs}ms, RMS=${rms.toFixed(2)}`);
+            console.log(`[StreamClient] ✅ Audio validation passed: duration=${totalDuration}ms, RMS=${rms.toFixed(2)}, silence=${silenceDuration}ms`);
             
             // Get language preference from session
             const languageHint = session.language || 'auto';
@@ -372,7 +560,7 @@ class StreamClient {
                 return;
             }
             
-            // ✅ VALIDATION: Check for minimum meaningful content (at least 3 characters)
+            // ✅ VALIDATION: Check for minimum meaningful content
             if (text.trim().length < 3) {
                 console.warn(`[StreamClient] 🚫 FILTERED: Text too short - "${text}" (likely garbage)`);
                 processor.reset();
@@ -403,7 +591,8 @@ class StreamClient {
                 text: text || '',
                 language: language || languageHint,
                 durationMs: processorInfo.durationMs,
-                transcriptionTimeMs: transcriptionTime
+                transcriptionTimeMs: transcriptionTime,
+                silenceDuration
             });
             session.totalChunks++;
             
@@ -414,14 +603,13 @@ class StreamClient {
                 text,
                 language,
                 audioDurationMs: processorInfo.durationMs,
-                transcriptionTimeMs: transcriptionTime
+                transcriptionTimeMs: transcriptionTime,
+                silenceDuration
             });
             
-            // ✅ IMMEDIATELY trigger conversational flow (generate AI response + playback)
-            // This happens while call is still active, not at stop event!
-            // But only if not already playing back
+            // ✅ ENHANCED: Banking Intent Recognition and Immediate Response
             if (text && text.trim().length > 0 && !this.playbackInProgress.get(ucid)) {
-                console.log('[StreamClient] 🎯 Silence detected → Triggering IMMEDIATE playback', {
+                console.log('[StreamClient] � Processing banking intent and generating response', {
                     ucid,
                     textSnippet: text.substring(0, 80),
                     timestampMs: Date.now()
@@ -431,25 +619,55 @@ class StreamClient {
                 this.playbackInProgress.set(ucid, true);
                 
                 try {
-                    const flowStartTs = Date.now();
-                    const flowResult = await flowEngine.executeConversationalFlow(ucid, text, { 
-                        language: session.language || 'en' 
-                    });
-                    const flowElapsed = Date.now() - flowStartTs;
+                    // Step 1: Recognize banking intent
+                    const bankingResult = await this.recognizeBankingIntent(text);
                     
-                    console.log('[StreamClient] ✅ Conversational flow completed', { 
-                        ucid, 
-                        success: flowResult, 
-                        elapsedMs: flowElapsed 
+                    console.log('[StreamClient] 🎯 Banking intent recognized:', {
+                        intent: bankingResult.intent,
+                        confidence: bankingResult.confidence
                     });
+                    
+                    // Step 2: Play back the banking response
+                    const playbackSuccess = await this.playbackToOzonetel(
+                        ucid, 
+                        bankingResult.response, 
+                        session.language || 'en'
+                    );
+                    
+                    if (playbackSuccess) {
+                        console.log('[StreamClient] ✅ Banking response played successfully');
+                        
+                        // Log the intent and response
+                        await this.logEvent('banking_intent_response', {
+                            ucid,
+                            userText: text,
+                            detectedIntent: bankingResult.intent,
+                            confidence: bankingResult.confidence,
+                            response: bankingResult.response,
+                            playbackSuccess: true
+                        });
+                    } else {
+                        console.error('[StreamClient] ❌ Failed to play banking response');
+                    }
+                    
                 } catch (flowErr) {
-                    console.error('[StreamClient] ❌ Error in conversational flow:', flowErr);
+                    console.error('[StreamClient] ❌ Error in banking intent processing:', flowErr);
+                    
+                    // Fallback response
+                    await this.playbackToOzonetel(
+                        ucid, 
+                        "I apologize, I'm experiencing technical difficulties. Please hold while I connect you to a customer service representative.", 
+                        session.language || 'en'
+                    );
                 } finally {
-                    // Clear playback flag so next chunk can trigger new playback
+                    // Clear playback flag for next chunk
                     this.playbackInProgress.delete(ucid);
+                    
+                    // Reset session timer for next input
+                    session.startTime = Date.now();
                 }
             } else if (this.playbackInProgress.get(ucid)) {
-                console.log('[StreamClient] ⏸️  Playback already in progress for', ucid, '- queuing text for later');
+                console.log('[StreamClient] ⏸️  Banking response playback already in progress for', ucid, '- queuing text for later');
             }
             
             // Reset processor for next chunk

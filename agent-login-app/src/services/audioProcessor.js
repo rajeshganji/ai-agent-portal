@@ -122,6 +122,14 @@ class AudioProcessor {
     }
 
     /**
+     * Get the duration of the last silence period in milliseconds
+     */
+    getLastSilenceDuration() {
+        const now = Date.now();
+        return now - this.lastAudioTime;
+    }
+
+    /**
      * Get current audio duration in milliseconds
      */
     getDurationMs() {

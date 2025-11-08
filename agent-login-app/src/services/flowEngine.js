@@ -288,70 +288,84 @@ class FlowEngine {
      * Execute conversational flow with real-time transcription and playback
      * @param {string} ucid - Call ID from Ozonetel
      * @param {string} transcriptionText - Transcribed user speech
-     * @param {Object} options - Flow options { language, voice }
+     * @param {Object} options - Flow options { language, voice, customResponse, skipAI }
      * @returns {Promise<boolean>} - Success status
      */
     async executeConversationalFlow(ucid, transcriptionText, options = {}) {
         try {
-            const { language = 'en', voice = 'alloy' } = options;
+            const { 
+                language = 'en', 
+                voice = 'alloy', 
+                customResponse = null, 
+                skipAI = false 
+            } = options;
+            
             const session = this.getSession(ucid);
             
             console.info('[FlowEngine] 🤖 Executing conversational flow', {
                 ucid,
                 userInput: transcriptionText.substring(0, 100),
                 language,
-                voice
+                voice,
+                skipAI,
+                hasCustomResponse: !!customResponse
             });
 
-            // 🔧 CHECK ECHO MODE (for testing)
-            const echoMode = process.env.ECHO_MODE === 'true';
-            
             let responseText;
             
-            if (echoMode) {
-                // ECHO MODE: Just repeat what user said
-                console.info('[FlowEngine] 🔊 ECHO MODE: Repeating user input');
-                responseText = `You said: ${transcriptionText}`;
+            // Skip AI processing if custom response provided
+            if (skipAI && customResponse) {
+                console.info('[FlowEngine] 🔊 Using provided custom response (skipping AI)');
+                responseText = customResponse;
             } else {
-                // CONVERSATIONAL MODE: Use AI to generate intelligent responses
+                // 🔧 CHECK ECHO MODE (for testing)
+                const echoMode = process.env.ECHO_MODE === 'true';
                 
-                // Step 1: Detect intent from transcription
-                console.info('[FlowEngine] 🎯 Detecting intent...');
-                const intentResult = await openaiService.detectIntent(
-                    transcriptionText,
-                    ['greeting', 'help', 'complaint', 'query', 'goodbye', 'unknown']
-                );
+                if (echoMode) {
+                    // ECHO MODE: Just repeat what user said
+                    console.info('[FlowEngine] 🔊 ECHO MODE: Repeating user input');
+                    responseText = `You said: ${transcriptionText}`;
+                } else {
+                    // CONVERSATIONAL MODE: Use AI to generate intelligent responses
+                    
+                    // Step 1: Detect intent from transcription
+                    console.info('[FlowEngine] 🎯 Detecting intent...');
+                    const intentResult = await openaiService.detectIntent(
+                        transcriptionText,
+                        ['greeting', 'help', 'complaint', 'query', 'goodbye', 'unknown']
+                    );
 
-                console.info('[FlowEngine] Intent detected:', intentResult);
-                session.context.lastIntent = intentResult.intent;
-                session.context.lastConfidence = intentResult.confidence;
+                    console.info('[FlowEngine] Intent detected:', intentResult);
+                    session.context.lastIntent = intentResult.intent;
+                    session.context.lastConfidence = intentResult.confidence;
 
-                // Step 2: Generate AI response based on intent and conversation history
-                console.info('[FlowEngine] 💬 Generating AI response...');
-                
-                const systemContext = `You are a helpful AI assistant in a phone call. 
+                    // Step 2: Generate AI response based on intent and conversation history
+                    console.info('[FlowEngine] 💬 Generating AI response...');
+                    
+                    const systemContext = `You are a helpful AI assistant in a phone call. 
 Keep responses concise and natural for voice interaction (under 50 words).
 Current intent: ${intentResult.intent}
 Confidence: ${intentResult.confidence}
 Language: ${language}`;
 
-                responseText = await openaiService.generateResponse(
-                    transcriptionText,
-                    session.conversationHistory,
-                    systemContext
-                );
+                    responseText = await openaiService.generateResponse(
+                        transcriptionText,
+                        session.conversationHistory,
+                        systemContext
+                    );
 
-                console.info('[FlowEngine] Response generated:', responseText.substring(0, 100));
+                    console.info('[FlowEngine] Response generated:', responseText.substring(0, 100));
 
-                // Step 3: Add to conversation history
-                session.conversationHistory.push(
-                    { role: 'user', content: transcriptionText },
-                    { role: 'assistant', content: responseText }
-                );
+                    // Step 3: Add to conversation history
+                    session.conversationHistory.push(
+                        { role: 'user', content: transcriptionText },
+                        { role: 'assistant', content: responseText }
+                    );
 
-                // Limit history to last 10 messages
-                if (session.conversationHistory.length > 10) {
-                    session.conversationHistory = session.conversationHistory.slice(-10);
+                    // Limit history to last 10 messages
+                    if (session.conversationHistory.length > 10) {
+                        session.conversationHistory = session.conversationHistory.slice(-10);
+                    }
                 }
             }
 
