@@ -1,4 +1,8 @@
+import { useNavigate } from 'react-router-dom';
+
 function TestPage() {
+  const navigate = useNavigate();
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -23,6 +27,40 @@ function TestPage() {
         <p style={{ marginBottom: '20px', color: 'rgba(255,255,255,0.8)' }}>
           This means the frontend is loading and React Router is functioning correctly.
         </p>
+        
+        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '20px' }}>
+          <button
+            onClick={() => navigate('/flows')}
+            style={{
+              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600'
+            }}
+          >
+            📋 View Flows List
+          </button>
+          <button
+            onClick={() => navigate('/designer')}
+            style={{
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600'
+            }}
+          >
+            🎨 Open Designer
+          </button>
+        </div>
+        
         <div style={{
           background: 'rgba(0,0,0,0.3)',
           padding: '15px',
