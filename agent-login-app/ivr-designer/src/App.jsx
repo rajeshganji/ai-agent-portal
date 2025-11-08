@@ -8,10 +8,13 @@ function App() {
   return (
     <Router basename="/ivr-designer">
       <Routes>
-        <Route path="/" element={<TestPage />} />
+        <Route path="/" element={<FlowsList />} />
         <Route path="/flows" element={<FlowsList />} />
+        <Route path="/test" element={<TestPage />} />
         <Route path="/designer" element={<Designer />} />
         <Route path="/designer/:flowId" element={<Designer />} />
+        {/* Fallback route */}
+        <Route path="*" element={<FlowsList />} />
       </Routes>
     </Router>
   );

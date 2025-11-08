@@ -30,9 +30,24 @@ function TestPage() {
         
         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '20px' }}>
           <button
-            onClick={() => navigate('/flows')}
+            onClick={() => navigate('/')}
             style={{
               background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              fontWeight: '600'
+            }}
+          >
+            📋 Go to Main App
+          </button>
+          <button
+            onClick={() => navigate('/flows')}
+            style={{
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
               color: 'white',
               border: 'none',
               padding: '12px 24px',

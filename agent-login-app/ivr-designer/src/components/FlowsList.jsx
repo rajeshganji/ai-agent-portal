@@ -128,14 +128,9 @@ function FlowsList() {
 
       {/* Content */}
       <div className="container mx-auto px-6 py-8">
-        {/* Debug Information */}
-        <div className="text-white text-sm mb-4 p-4 bg-black bg-opacity-50 rounded">
-          <p>Debug: Loading={loading.toString()}, Error={error || 'none'}, FlowsCount={flows.length}</p>
-        </div>
-        
-        {flows.length === 0 ? (
+        {flows.length === 0 && !loading ? (
           <div className="text-center py-16">
-            <div className="glass-card p-12 rounded-2xl max-w-md mx-auto" style={{
+            <div className="p-12 rounded-2xl max-w-md mx-auto" style={{
               background: 'rgba(255, 255, 255, 0.1)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255, 255, 255, 0.2)'
@@ -152,6 +147,16 @@ function FlowsList() {
                 <Plus className="w-5 h-5" />
                 <span className="font-medium">Create First Flow</span>
               </button>
+              
+              {/* Test page link */}
+              <div className="mt-6">
+                <a 
+                  href="/ivr-designer/test" 
+                  className="text-blue-300 hover:text-blue-200 text-sm underline"
+                >
+                  🧪 Go to Test Page
+                </a>
+              </div>
             </div>
           </div>
         ) : (
