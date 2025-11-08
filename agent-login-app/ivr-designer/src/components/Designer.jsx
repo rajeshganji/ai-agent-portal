@@ -69,9 +69,32 @@ function Designer() {
       originalError.apply(console, args);
     };
     
+    // 🚨 GLOBAL CLICK DETECTOR - CATCH ALL CLICKS
+    const globalClickHandler = (event) => {
+      console.log('🖱️ GLOBAL CLICK DETECTED:', {
+        target: event.target,
+        tagName: event.target.tagName,
+        id: event.target.id,
+        className: event.target.className,
+        textContent: event.target.textContent?.substring(0, 50)
+      });
+      
+      // Check if it's our save button
+      if (event.target.id === 'save-button' || 
+          event.target.closest('#save-button') ||
+          event.target.textContent?.includes('Save Flow')) {
+        console.log('🎯🎯🎯 SAVE BUTTON CLICKED DETECTED! 🎯🎯🎯');
+      }
+    };
+    
+    // Add global click listener
+    document.addEventListener('click', globalClickHandler, true);
+    
     return () => {
       // Restore original console.error on cleanup
       console.error = originalError;
+      // Remove global click listener
+      document.removeEventListener('click', globalClickHandler, true);
     };
   }, [flowId, loadExistingFlow, clearFlow]);
 
@@ -393,7 +416,15 @@ function Designer() {
         <div className="flex items-center space-x-3">
           <Toolbar />
           
-          {/* 🧹 CLEAR STORAGE BUTTON */}
+          {/* � TEST BUTTON - SIMPLE CLICK DETECTION */}
+          <button
+            onClick={() => alert('🧪 TEST BUTTON WORKS! Save button should work too.')}
+            className="flex items-center space-x-2 bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-all"
+          >
+            <span>🧪 Test</span>
+          </button>
+          
+          {/* �🧹 CLEAR STORAGE BUTTON */}
           <button
             onClick={handleClearStorage}
             className="flex items-center space-x-2 bg-red-500/20 text-red-300 px-3 py-2 rounded-lg hover:bg-red-500/30 border border-red-400/30 transition-all"
@@ -410,16 +441,13 @@ function Designer() {
             <div>Edges: {storeEdges?.length || 0}</div>
           </div>
           
+          {/* 🚨 ENHANCED SAVE FLOW BUTTON - MORE VISIBLE */}
           <button
             id="save-button"
-            onClick={() => {
-              console.log('🚨 [Designer] SAVE BUTTON CLICKED! Event fired');
-              console.log('🚨 [Designer] Current saving state:', saving);
-              handleSaveFlow();
-            }}
+            onClick={handleSaveFlow}
             disabled={saving}
-            className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ minWidth: '120px' }}
+            className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg border-2 border-green-400"
+            style={{ minWidth: '140px', fontSize: '16px', fontWeight: 'bold' }}
           >
             {saving ? (
               <>
