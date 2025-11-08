@@ -174,15 +174,29 @@ console.log('[Server] Setting up stream routes');
 const streamModule = require('./src/routes/stream.js');
 app.use('/api/stream', securityConfig.rateLimiters.general, streamModule.router);
 
-// Serve IVR Designer static assets FIRST (before API routes)
+// Serve IVR Designer static assets FIRST (before API routes) with enhanced CSP
 console.log('[Server] Setting up IVR Designer static files');
-app.use('/ivr-designer', express.static(path.join(__dirname, 'ivr-designer/dist'), {
+app.use('/ivr-designer', securityConfig.ivrDesignerCSP, express.static(path.join(__dirname, 'ivr-designer/dist'), {
     setHeaders: (res, filepath) => {
         // Ensure correct MIME types for assets
         if (filepath.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript');
         } else if (filepath.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
+        }
+        // Override CSP headers for better media support
+        if (filepath.endsWith('index.html')) {
+            res.setHeader('Content-Security-Policy', 
+                "default-src 'self'; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                "style-src 'self' 'unsafe-inline'; " +
+                "img-src 'self' data: blob:; " +
+                "media-src 'self' data: blob:; " +
+                "font-src 'self' data:; " +
+                "connect-src 'self' ws: wss:; " +
+                "object-src 'none'; " +
+                "base-uri 'self';"
+            );
         }
     }
 }));
@@ -255,6 +269,20 @@ app.get('/api/ws/status', (req, res) => {
 app.get('/ivr/designer/flow/:id?', (req, res) => {
     const flowId = req.params.id || 'new';
     console.log(`[IVR Designer] Opening flow editor for: ${flowId}`);
+    
+    // Set enhanced CSP headers for IVR Designer
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: blob:; " +
+        "media-src 'self' data: blob:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self' ws: wss:; " +
+        "object-src 'none'; " +
+        "base-uri 'self';"
+    );
+    
     res.sendFile(path.join(__dirname, 'ivr-designer/dist/index.html'));
 });
 

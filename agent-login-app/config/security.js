@@ -10,14 +10,41 @@ module.exports = {
         styleSrc: ["'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "stackpath.bootstrapcdn.com"],
         scriptSrc: ["'self'", "'unsafe-inline'", "code.jquery.com", "cdn.jsdelivr.net", "stackpath.bootstrapcdn.com"],
         connectSrc: ["'self'", "wss:", "ws:"],
-        imgSrc: ["'self'", "data:", "https:"],
-        fontSrc: ["'self'", "fonts.googleapis.com", "fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        mediaSrc: ["'self'", "data:", "blob:"],
+        fontSrc: ["'self'", "data:", "fonts.googleapis.com", "fonts.gstatic.com"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
       },
     },
     hsts: {
       maxAge: 31536000,
       includeSubDomains: true,
       preload: true
+    },
+    frameguard: {
+      action: 'deny'
+    },
+    noSniff: true,
+    xssFilter: true
+  }),
+
+  // Enhanced CSP configuration specifically for IVR Designer
+  ivrDesignerCSP: helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        connectSrc: ["'self'", "wss:", "ws:"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        mediaSrc: ["'self'", "data:", "blob:"],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
     },
     frameguard: {
       action: 'deny'
