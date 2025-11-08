@@ -58,12 +58,20 @@ function Designer() {
       setSaving(true);
       const flowData = getFlowJSON();
       
-      console.log('🔄 [Designer] Saving flow:', {
+      console.log('🔄 [Designer] ===== FLOW SAVE ATTEMPT =====');
+      console.log('🔄 [Designer] Current state:', {
         currentFlowId,
         flowName: flowData.name,
         nodeCount: flowData.nodes?.length || 0,
-        edgeCount: flowData.edges?.length || 0
+        edgeCount: flowData.edges?.length || 0,
+        nodes: flowData.nodes,
+        edges: flowData.edges
       });
+      
+      // Check if we have any data to save
+      if (!flowData.nodes || flowData.nodes.length === 0) {
+        console.warn('⚠️ [Designer] No nodes to save - flow appears empty');
+      }
       
       let response;
       let url;
@@ -72,6 +80,9 @@ function Designer() {
         // Update existing flow
         url = `/api/ivr/designer/flows/${currentFlowId}`;
         console.log('📝 [Designer] Updating existing flow:', currentFlowId);
+        console.log('📝 [Designer] PUT URL:', url);
+        console.log('📝 [Designer] PUT Data:', JSON.stringify(flowData, null, 2));
+        
         response = await fetch(url, {
           method: 'PUT',
           headers: {
@@ -83,6 +94,9 @@ function Designer() {
         // Create new flow
         url = '/api/ivr/designer/flows';
         console.log('🆕 [Designer] Creating new flow');
+        console.log('🆕 [Designer] POST URL:', url);
+        console.log('🆕 [Designer] POST Data:', JSON.stringify(flowData, null, 2));
+        
         response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -93,6 +107,7 @@ function Designer() {
       }
       
       console.log('🌐 [Designer] API Response status:', response.status);
+      console.log('🌐 [Designer] API Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -112,6 +127,8 @@ function Designer() {
         console.log('🔄 [Designer] Navigating to:', newPath);
         navigate(newPath, { replace: true });
       }
+      
+      console.log('🎉 [Designer] ===== FLOW SAVE COMPLETED =====');
       
       console.log('Flow saved successfully:', result);
       

@@ -186,12 +186,26 @@ export const useFlowStore = create((set, get) => ({
   // Get flow JSON
   getFlowJSON: () => {
     const state = get();
-    return {
+    const flowData = {
       id: state.flowId,
       name: state.flowName,
       nodes: state.nodes,
       edges: state.edges,
       createdAt: new Date().toISOString(),
     };
+    
+    if (state.debugMode) {
+      console.log('📄 [FlowStore] getFlowJSON called:', {
+        flowId: state.flowId,
+        flowName: state.flowName,
+        nodeCount: state.nodes?.length || 0,
+        edgeCount: state.edges?.length || 0,
+        isEditingMode: state.isEditingMode,
+        blockCanvasInteractions: state.blockCanvasInteractions
+      });
+      console.log('📄 [FlowStore] Full flow data:', flowData);
+    }
+    
+    return flowData;
   },
 }));
