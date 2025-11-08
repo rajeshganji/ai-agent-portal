@@ -305,6 +305,27 @@ app.get('/toolbar', requireAuth, (req, res) => {
     });
 });
 
+// IVR Designer SPA catch-all route - Must be AFTER static assets but BEFORE 404
+// This handles all client-side routes like /ivr-designer/flows, /ivr-designer/designer, etc.
+app.get('/ivr-designer/*', (req, res) => {
+    console.log(`[IVR Designer] SPA route: ${req.url}`);
+    
+    // Set enhanced CSP headers for IVR Designer
+    res.setHeader('Content-Security-Policy', 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: blob:; " +
+        "media-src 'self' data: blob:; " +
+        "font-src 'self' data:; " +
+        "connect-src 'self' ws: wss:; " +
+        "object-src 'none'; " +
+        "base-uri 'self';"
+    );
+    
+    res.sendFile(path.join(__dirname, 'ivr-designer/dist/index.html'));
+});
+
 // 404 handler
 app.use((req, res) => {
     console.log(`[404] Not Found: ${req.method} ${req.url}`);
