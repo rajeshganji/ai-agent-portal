@@ -38,7 +38,9 @@ const FlowCanvas = () => {
     setSelectedNode, 
     setNodes: setStoreNodes, 
     setEdges: setStoreEdges,
-    debugMode
+    debugMode,
+    blockCanvasInteractions,
+    isEditingMode
   } = useFlowStore();
 
   // Only sync store to local state on mount if store has data
@@ -78,11 +80,20 @@ const FlowCanvas = () => {
     initializeFlow();
   }, [initializeFlow]);
 
-  // Sync with store
+  // Sync with store - but BLOCK during editing mode
   const syncToStore = useCallback(() => {
+    if (blockCanvasInteractions) {
+      if (debugMode) {
+        console.log('🚫 [FlowCanvas] Sync BLOCKED - editing in progress');
+      }
+      return;
+    }
+    if (debugMode) {
+      console.log('🔄 [FlowCanvas] Syncing to store - nodes:', nodes.length, 'edges:', edges.length);
+    }
     setStoreNodes(nodes);
     setStoreEdges(edges);
-  }, [nodes, edges, setStoreNodes, setStoreEdges]);
+  }, [nodes, edges, setStoreNodes, setStoreEdges, blockCanvasInteractions, debugMode]);
 
   // Sync to store whenever nodes or edges change
   useEffect(() => {
@@ -175,9 +186,15 @@ const FlowCanvas = () => {
       if (debugMode) {
         console.log('🎯 [FlowCanvas] Node clicked:', node.id, 'Type:', node.type);
       }
-      setSelectedNode(node);
+      
+      // Don't change selection if we're in editing mode
+      if (!isEditingMode) {
+        setSelectedNode(node);
+      } else if (debugMode) {
+        console.log('🚫 [FlowCanvas] Node click ignored - editing mode active');
+      }
     },
-    [setSelectedNode, debugMode]
+    [setSelectedNode, debugMode, isEditingMode]
   );
 
   // Add mouse event logging
@@ -190,12 +207,17 @@ const FlowCanvas = () => {
     }
   }, [debugMode]);
 
-  const onPaneClick = useCallback((event) => {
+  const onPaneClick = useCallback(() => {
     if (debugMode) {
       console.log('🖱️ [FlowCanvas] Pane clicked - deselecting node');
     }
-    setSelectedNode(null);
-  }, [setSelectedNode, debugMode]);
+    // Don't clear selection if we're in editing mode
+    if (!isEditingMode) {
+      setSelectedNode(null);
+    } else if (debugMode) {
+      console.log('🚫 [FlowCanvas] Pane click ignored - editing mode active');
+    }
+  }, [setSelectedNode, debugMode, isEditingMode]);
 
   return (
     <div ref={reactFlowWrapper} className="flex-1 relative overflow-hidden">

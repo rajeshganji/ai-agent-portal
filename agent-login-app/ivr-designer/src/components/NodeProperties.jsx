@@ -166,14 +166,17 @@ const NodeProperties = () => {
                 id="playaudio-url"
                 name="playaudio-url"
                 type="url"
-                className="property-input"
-                value={selectedNode.data.audioUrl || ''}
+                className={`property-input ${!isEditingMode ? 'opacity-60 cursor-not-allowed' : ''}`}
+                value={currentNodeData?.audioUrl || ''}
                 onChange={(e) => handleChange('audioUrl', e.target.value)}
                 placeholder="https://example.com/audio.mp3"
                 autoComplete="off"
+                readOnly={!isEditingMode}
+                disabled={!isEditingMode}
               />
               <div className="text-xs text-white/60 mt-1">
                 📎 Supported formats: MP3, WAV, M4A
+                {!isEditingMode && <span className="text-yellow-300 ml-2">Click Edit to modify</span>}
               </div>
             </div>
             
@@ -201,15 +204,18 @@ const NodeProperties = () => {
               <textarea
                 id="findintent-prompt"
                 name="findintent-prompt"
-                className="property-input h-20"
+                className={`property-input h-20 ${!isEditingMode ? 'opacity-60 cursor-not-allowed' : ''}`}
                 rows={3}
-                value={selectedNode.data.prompt || ''}
+                value={currentNodeData?.prompt || ''}
                 onChange={(e) => handleChange('prompt', e.target.value)}
                 placeholder="How can I help you today?"
                 autoComplete="off"
+                readOnly={!isEditingMode}
+                disabled={!isEditingMode}
               />
               <div className="text-xs text-white/60 mt-1">
                 🎯 This message will be spoken to collect user intent
+                {!isEditingMode && <span className="text-yellow-300 ml-2">Click Edit to modify</span>}
               </div>
             </div>
             
@@ -220,15 +226,18 @@ const NodeProperties = () => {
               <textarea
                 id="findintent-intents"
                 name="findintent-intents"
-                className="property-input h-24"
+                className={`property-input h-24 ${!isEditingMode ? 'opacity-60 cursor-not-allowed' : ''}`}
                 rows={4}
-                value={(selectedNode.data.intents || []).join('\n')}
+                value={(currentNodeData?.intents || []).join('\n')}
                 onChange={(e) => handleChange('intents', e.target.value.split('\n').filter(i => i.trim()))}
                 placeholder="sales&#10;support&#10;billing&#10;other"
                 autoComplete="off"
+                readOnly={!isEditingMode}
+                disabled={!isEditingMode}
               />
               <div className="text-xs text-white/60 mt-1">
                 🔗 Each intent becomes an output connection point
+                {!isEditingMode && <span className="text-yellow-300 ml-2">Click Edit to modify</span>}
               </div>
             </div>
           </div>

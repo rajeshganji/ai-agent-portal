@@ -12,6 +12,9 @@ export const useFlowStore = create((set, get) => ({
   nodeBeingEdited: null,
   isEditingMode: false,
   
+  // AGGRESSIVE CANVAS BLOCKING during editing
+  blockCanvasInteractions: false,
+  
   // Flow metadata
   flowName: 'Untitled Flow',
   flowId: null,
@@ -65,12 +68,14 @@ export const useFlowStore = create((set, get) => ({
     const state = get();
     if (state.debugMode) {
       console.log('🔧 [FlowStore] Starting edit mode for node:', node.id, JSON.stringify(node.data, null, 2));
+      console.log('🚫 [FlowStore] BLOCKING all canvas interactions during editing');
     }
     // Create a deep copy of the node for isolated editing
     const nodeCopy = JSON.parse(JSON.stringify(node));
     set({ 
       nodeBeingEdited: nodeCopy,
       isEditingMode: true,
+      blockCanvasInteractions: true,  // BLOCK ALL CANVAS UPDATES
       selectedNode: node
     });
   },
@@ -105,6 +110,7 @@ export const useFlowStore = create((set, get) => ({
     if (state.debugMode) {
       console.log('💾 [FlowStore] Saving node changes:', state.nodeBeingEdited.id, 
         JSON.stringify(state.nodeBeingEdited.data, null, 2));
+      console.log('✅ [FlowStore] UNBLOCKING canvas interactions');
     }
     
     // Update the actual nodes array
@@ -115,7 +121,8 @@ export const useFlowStore = create((set, get) => ({
           : node
       ),
       isEditingMode: false,
-      nodeBeingEdited: null
+      nodeBeingEdited: null,
+      blockCanvasInteractions: false  // UNBLOCK CANVAS UPDATES
     }));
   },
   
@@ -124,10 +131,12 @@ export const useFlowStore = create((set, get) => ({
     const state = get();
     if (state.debugMode) {
       console.log('❌ [FlowStore] Cancelling edit mode');
+      console.log('✅ [FlowStore] UNBLOCKING canvas interactions');
     }
     set({
       isEditingMode: false,
-      nodeBeingEdited: null
+      nodeBeingEdited: null,
+      blockCanvasInteractions: false  // UNBLOCK CANVAS UPDATES
     });
   },
   
