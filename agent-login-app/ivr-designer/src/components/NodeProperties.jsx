@@ -16,20 +16,14 @@ const NodeProperties = () => {
 
   if (!selectedNode) {
     return (
-      <div className="w-80 properties-gradient border-l-4 border-white/20 p-6 backdrop-blur-sm">
+      <div className="w-56 bg-gray-50 border-l border-gray-200 p-4 backdrop-blur-sm">
         <div className="text-center mt-16">
-          <div className="w-16 h-16 bg-white/20 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-            <Settings className="w-8 h-8 text-white" />
+          <div className="w-12 h-12 bg-gray-200 rounded-xl mx-auto mb-3 flex items-center justify-center">
+            <Settings className="w-6 h-6 text-gray-500" />
           </div>
-          <div className="text-white/80 text-sm font-medium mb-2">No Node Selected</div>
-          <div className="text-white/60 text-xs leading-relaxed">
-            Click on a node in the canvas to edit its properties and configure its behavior
-          </div>
-          <div className="mt-6 p-3 bg-white/10 rounded-xl border border-white/20">
-            <div className="text-white/70 text-xs flex items-center gap-2">
-              <Sparkles className="w-4 h-4" />
-              Tip: Each node type has unique settings
-            </div>
+          <div className="text-gray-700 text-sm font-medium mb-2">No Node Selected</div>
+          <div className="text-gray-600 text-xs leading-relaxed">
+            Click on a node in the canvas to edit its properties
           </div>
         </div>
       </div>
@@ -400,7 +394,7 @@ const NodeProperties = () => {
   };
 
   return (
-    <div className="w-80 properties-gradient border-l-4 border-white/20 p-6 backdrop-blur-sm overflow-y-auto beautiful-scrollbar">
+    <div className="w-56 bg-gray-50 border-l border-gray-200 p-4 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 bg-gradient-to-r ${getNodeColor(selectedNode.type)} rounded-xl flex items-center justify-center text-white shadow-lg`}>

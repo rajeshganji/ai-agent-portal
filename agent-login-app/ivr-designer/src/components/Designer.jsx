@@ -14,6 +14,14 @@ function Designer() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   
+  // 🚨 VERSION CHECK - ENSURE LATEST DEPLOYMENT
+  useEffect(() => {
+    console.log('🔥 [Designer] VERSION CHECK: Ultra-logging + compact palette v2.0');
+    console.log('🔥 [Designer] Timestamp:', new Date().toISOString());
+    console.log('🔥 [Designer] URL:', window.location.href);
+    console.log('🔥 [Designer] If you see this, the latest version is loaded!');
+  }, []);
+  
   const { 
     flowName, 
     flowId: currentFlowId, 
