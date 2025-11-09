@@ -16,6 +16,10 @@ import PlayTextNode from './nodes/PlayTextNode';
 import PlayAudioNode from './nodes/PlayAudioNode';
 import FindIntentNode from './nodes/FindIntentNode';
 import ConditionalNode from './nodes/ConditionalNode';
+import TransferNode from './nodes/TransferNode';
+import HangupNode from './nodes/HangupNode';
+import WebhookNode from './nodes/WebhookNode';
+import CollectInputNode from './nodes/CollectInputNode';
 
 const nodeTypes = {
   start: StartNode,
@@ -23,6 +27,10 @@ const nodeTypes = {
   playAudio: PlayAudioNode,
   findIntent: FindIntentNode,
   conditional: ConditionalNode,
+  transfer: TransferNode,
+  hangup: HangupNode,
+  webhook: WebhookNode,
+  collectInput: CollectInputNode,
 };
 
 let nodeId = 0;

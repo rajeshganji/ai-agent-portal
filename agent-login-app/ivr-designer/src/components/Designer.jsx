@@ -6,6 +6,7 @@ import NodePalette from './NodePalette';
 import FlowCanvas from './FlowCanvas';
 import NodeProperties from './NodeProperties';
 import { ArrowLeft, Save, Loader } from 'lucide-react';
+import ColorShowcase from './ColorShowcase';
 
 function Designer() {
   const { flowId } = useParams();
@@ -390,26 +391,26 @@ function Designer() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-100">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Enhanced Toolbar with Save and Back buttons */}
-      <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200 shadow-sm">
+      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-200 shadow-sm">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleBackToFlows}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="flex items-center space-x-2 text-purple-700 hover:text-purple-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Back to Flows</span>
           </button>
-          <div className="text-gray-800">
+          <div className="text-purple-900">
             <h1 className="text-lg font-bold">
               {flowName}
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-purple-600">
               {currentFlowId ? (
                 <span className="flex items-center gap-2">
-                  <span>Flow ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs">{currentFlowId}</span></span>
-                  <span className="text-xs text-green-600">✓ Saved</span>
+                  {/* <span>Flow ID: <span className="font-mono bg-purple-100 px-2 py-1 rounded text-xs">{currentFlowId}</span></span> */}
+                  <span className="text-xs text-green-600">✓ Saved Flow</span>
                 </span>
               ) : (
                 <span className="text-orange-600">⚠️ Unsaved Flow</span>
@@ -440,8 +441,8 @@ function Designer() {
           </button>
           
           {/* Debug info display */}
-          <div className="text-xs bg-gray-100 border border-gray-200 p-2 rounded text-gray-700">
-            <div>FlowId: {currentFlowId || 'NEW'}</div>
+          <div className="text-xs bg-purple-100 border border-purple-300 p-2 rounded text-purple-700">
+            {/* <div>FlowId: {currentFlowId || 'NEW'}</div> */}
             <div>Nodes: {storeNodes?.length || 0}</div>
             <div>Edges: {storeEdges?.length || 0}</div>
           </div>
@@ -475,6 +476,10 @@ function Designer() {
         <FlowCanvas />
         <NodeProperties />
       </div>
+      
+      {/* Temporarily disabled ColorShowcase 
+      <ColorShowcase />
+      */}
     </div>
   );
 }

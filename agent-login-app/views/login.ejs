@@ -27,20 +27,48 @@
                 <div class="card">
                     <div class="card-body">
                         <h3 class="card-title text-center">Agent Login</h3>
-                        <form id="loginForm">
+                        <form id="loginForm" novalidate>
                             <div class="mb-3">
-                                <label class="form-label">Username</label>
-                                <input type="text" class="form-control" id="username" required>
+                                <label class="form-label" for="username">Username</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="username" 
+                                    name="username"
+                                    autocomplete="username"
+                                    aria-describedby="usernameHelp"
+                                    required
+                                >
+                                <div id="usernameHelp" class="form-text">Enter your assigned username</div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Agent ID</label>
-                                <input type="text" class="form-control" id="agentId" required>
+                                <label class="form-label" for="agentId">Agent ID</label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="agentId" 
+                                    name="agentId"
+                                    autocomplete="off"
+                                    aria-describedby="agentIdHelp"
+                                    required
+                                >
+                                <div id="agentIdHelp" class="form-text">Your unique agent identifier</div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" required>
+                                <label class="form-label" for="password">Password</label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="password" 
+                                    name="password"
+                                    autocomplete="current-password"
+                                    aria-describedby="passwordHelp"
+                                    required
+                                >
+                                <div id="passwordHelp" class="form-text">Enter your secure password</div>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100">Login</button>
+                            <button type="submit" class="btn btn-primary w-100" aria-describedby="loginStatus">Login</button>
+                            <div id="loginStatus" class="form-text mt-2" role="status" aria-live="polite"></div>
                         </form>
                     </div>
                 </div>

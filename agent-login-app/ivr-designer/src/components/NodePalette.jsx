@@ -92,16 +92,16 @@ const NodePalette = () => {
   };
 
   return (
-    <div className="w-20 bg-gray-50 border-r border-gray-200 flex flex-col">
+    <div className="w-20 bg-gradient-to-b from-emerald-50 to-green-50 border-r border-emerald-200 flex flex-col">
       {/* Compact Header */}
-      <div className="bg-white p-3 border-b border-gray-200 text-center">
-        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+      <div className="bg-gradient-to-r from-emerald-100 to-green-100 p-3 border-b border-emerald-200 text-center">
+        <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
           Nodes
         </div>
       </div>
       
       {/* Icon-Only Node Grid */}
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+      <div className="flex-1 p-3 space-y-3 overflow-y-auto">
         {nodeTypes.map((node) => {
           const Icon = node.icon;
           return (
@@ -110,7 +110,9 @@ const NodePalette = () => {
               className={`
                 group relative 
                 w-14 h-14 
-                ${node.bgClass} ${node.hoverClass}
+                bg-white 
+                border-2 border-gray-200
+                hover:border-gray-300
                 rounded-lg 
                 cursor-move 
                 flex items-center justify-center 
@@ -122,7 +124,10 @@ const NodePalette = () => {
               onDragStart={(e) => onDragStart(e, node.type)}
               title={`${node.label}: ${node.description}`}
             >
-              <Icon className="w-6 h-6 text-white" />
+              <Icon 
+                className="w-7 h-7" 
+                style={{ color: node.color }}
+              />
               
               {/* Tooltip on hover */}
               <div className="

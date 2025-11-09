@@ -74,7 +74,7 @@ class StreamServer {
         console.log(`[StreamServer] Connection headers:`, JSON.stringify(req.headers, null, 2));
 
         // Generate connection ID
-        const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const connectionId = `conn_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
         this.connections.set(connectionId, ws);
         
         // Track message statistics

@@ -1,10 +1,10 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { MessageSquare } from 'lucide-react';
+import { PhoneOff } from 'lucide-react';
 import { getNodeColors } from '../../utils/nodeColors';
 
-const PlayTextNode = ({ data, selected }) => {
-  const colors = getNodeColors('playText');
+const HangupNode = ({ data, selected }) => {
+  const colors = getNodeColors('hangup');
   
   return (
     <div
@@ -20,24 +20,30 @@ const PlayTextNode = ({ data, selected }) => {
       
       <div className="flex items-center gap-2 mb-2">
         <div className={`p-1 rounded ${selected ? 'bg-white' : 'bg-white/70'}`}>
-          <MessageSquare className="w-5 h-5" style={{ color: colors.icon }} />
+          <PhoneOff className="w-5 h-5" style={{ color: colors.icon }} />
         </div>
-        <div className="font-bold text-sm text-gray-800">Play Text</div>
+        <div className="font-bold text-sm text-gray-800">Hang Up</div>
       </div>
       
       <div className="text-xs text-gray-600 mt-1">
-        {data.text ? (
-          <div className="italic bg-white/50 p-2 rounded">
-            "{data.text.substring(0, 50)}{data.text.length > 50 ? '...' : ''}"
+        {data.message ? (
+          <div className="bg-white/50 p-2 rounded">
+            💬 "{data.message}"
           </div>
         ) : (
-          <div className="text-gray-400 bg-white/30 p-2 rounded">No text configured</div>
+          <div className="text-gray-400 bg-white/30 p-2 rounded">End call gracefully</div>
         )}
       </div>
       
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
+      <div className="text-xs mt-2">
+        <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
+          🔚 End of Flow
+        </span>
+      </div>
+      
+      {/* No outgoing handle - hangup ends the call */}
     </div>
   );
 };
 
-export default memo(PlayTextNode);
+export default memo(HangupNode);

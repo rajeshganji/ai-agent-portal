@@ -197,7 +197,7 @@ export const useFlowStore = create((set, get) => ({
   // Create fresh new flow with generated ID
   createNewFlow: () => {
     const state = get();
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
     if (state.debugMode) {
       console.log('🆕 [FlowStore] Creating fresh new flow with temp ID:', tempId);
     }

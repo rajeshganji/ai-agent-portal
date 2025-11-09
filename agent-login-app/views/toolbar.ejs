@@ -197,15 +197,27 @@
         </script>
         
         <div class="mt-auto p-3">
-            <select id="statusSelect" class="form-select mb-3">
+            <label for="statusSelect" class="form-label text-light small">Agent Status</label>
+            <select 
+                id="statusSelect" 
+                name="agentStatus"
+                class="form-select mb-3"
+                aria-describedby="statusHelp"
+            >
                 <option value="AVAILABLE" <%= agent.agentStatus === 'AVAILABLE' ? 'selected' : '' %>>Available</option>
                 <option value="BUSY" <%= agent.agentStatus === 'BUSY' ? 'selected' : '' %>>Busy</option>
                 <option value="AWAY" <%= agent.agentStatus === 'AWAY' ? 'selected' : '' %>>Away</option>
                 <option value="INCOMING" <%= agent.agentStatus === 'INCOMING' ? 'selected' : '' %>>Incoming Call</option>
             </select>
-            <button id="logoutBtn" class="btn btn-danger w-100">
+            <div id="statusHelp" class="form-text text-light small">Change your availability status</div>
+            <button 
+                id="logoutBtn" 
+                class="btn btn-danger w-100"
+                aria-describedby="logoutHelp"
+            >
                 <i class="bi bi-box-arrow-right me-2"></i> Logout
             </button>
+            <div id="logoutHelp" class="form-text text-light small">End your session</div>
         </div>
     </div>
 
