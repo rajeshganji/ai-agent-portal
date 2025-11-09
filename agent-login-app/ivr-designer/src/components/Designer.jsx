@@ -390,33 +390,30 @@ function Designer() {
   }
 
   return (
-    <div className="h-screen flex flex-col gradient-bg-1 animated-bg">
+    <div className="h-screen flex flex-col bg-slate-100">
       {/* Enhanced Toolbar with Save and Back buttons */}
-      <div className="flex items-center justify-between p-4 glass-header border-b border-white/20">
+      <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center space-x-4">
           <button
             onClick={handleBackToFlows}
-            className="flex items-center space-x-2 text-white hover:text-gray-300 transition-colors"
+            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Back to Flows</span>
           </button>
-          <div className="text-white">
+          <div className="text-gray-800">
             <h1 className="text-lg font-bold">
               {flowName}
             </h1>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-gray-600">
               {currentFlowId ? (
                 <span className="flex items-center gap-2">
-                  <span>Flow ID: <span className="font-mono bg-white/10 px-2 py-1 rounded">{currentFlowId}</span></span>
-                  <span className="text-xs text-green-300">✓ Saved</span>
+                  <span>Flow ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded text-xs">{currentFlowId}</span></span>
+                  <span className="text-xs text-green-600">✓ Saved</span>
                 </span>
               ) : (
-                <span className="text-yellow-300">⚠️ Unsaved Flow</span>
+                <span className="text-orange-600">⚠️ Unsaved Flow</span>
               )}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              URL: {window.location.pathname}
             </p>
           </div>
         </div>
@@ -443,7 +440,7 @@ function Designer() {
           </button>
           
           {/* Debug info display */}
-          <div className="text-xs bg-black/30 p-2 rounded text-white">
+          <div className="text-xs bg-gray-100 border border-gray-200 p-2 rounded text-gray-700">
             <div>FlowId: {currentFlowId || 'NEW'}</div>
             <div>Nodes: {storeNodes?.length || 0}</div>
             <div>Edges: {storeEdges?.length || 0}</div>
@@ -454,7 +451,7 @@ function Designer() {
             id="save-button"
             onClick={handleSaveFlow}
             disabled={saving}
-            className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg border-2 border-green-400"
+            className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-600 hover:to-teal-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg border-2 border-green-400"
             style={{ minWidth: '140px', fontSize: '16px', fontWeight: 'bold' }}
           >
             {saving ? (
