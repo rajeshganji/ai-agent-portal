@@ -1,84 +1,86 @@
-import { MessageSquare, Volume2, Brain, GitBranch, Phone, PhoneOff, Zap, Users } from 'lucide-react';
+import { 
+  MessageSquare, 
+  Volume2, 
+  Brain, 
+  GitBranch, 
+  Phone, 
+  PhoneOff, 
+  Zap, 
+  Keyboard
+} from 'lucide-react';
 
+// 🎨 Industry-standard colors for IVR/Telecom nodes
 const nodeTypes = [
   {
     type: 'playText',
     label: 'Play Text',
     icon: MessageSquare,
-    color: 'bg-gradient-to-r from-blue-400 to-blue-600',
-    textColor: 'text-white',
-    borderColor: 'border-blue-300',
-    glowClass: 'glow-blue',
+    color: '#3B82F6', // Blue - Communication
+    bgClass: 'bg-blue-500',
+    hoverClass: 'hover:bg-blue-600',
     description: 'Convert text to speech using AI',
   },
   {
     type: 'playAudio',
     label: 'Play Audio',
     icon: Volume2,
-    color: 'bg-gradient-to-r from-purple-400 to-purple-600',
-    textColor: 'text-white',
-    borderColor: 'border-purple-300',
-    glowClass: 'glow-purple',
+    color: '#8B5CF6', // Purple - Media/Audio
+    bgClass: 'bg-purple-500',
+    hoverClass: 'hover:bg-purple-600',
     description: 'Play pre-recorded audio files',
   },
   {
     type: 'findIntent',
     label: 'AI Intent',
     icon: Brain,
-    color: 'bg-gradient-to-r from-green-400 to-green-600',
-    textColor: 'text-white',
-    borderColor: 'border-green-300',
-    glowClass: 'glow-green',
+    color: '#10B981', // Green - AI/Intelligence
+    bgClass: 'bg-green-500',
+    hoverClass: 'hover:bg-green-600',
     description: 'Understand caller intent with AI',
   },
   {
     type: 'conditional',
     label: 'Conditional',
     icon: GitBranch,
-    color: 'bg-gradient-to-r from-orange-400 to-orange-600',
-    textColor: 'text-white',
-    borderColor: 'border-orange-300',
-    glowClass: 'glow-orange',
+    color: '#F59E0B', // Amber - Logic/Branching
+    bgClass: 'bg-amber-500',
+    hoverClass: 'hover:bg-amber-600',
     description: 'Branch flow based on conditions',
   },
   {
     type: 'transfer',
     label: 'Transfer Call',
     icon: Phone,
-    color: 'bg-gradient-to-r from-teal-400 to-teal-600',
-    textColor: 'text-white',
-    borderColor: 'border-teal-300',
-    glowClass: 'glow-teal',
+    color: '#06B6D4', // Cyan - Call Transfer
+    bgClass: 'bg-cyan-500',
+    hoverClass: 'hover:bg-cyan-600',
     description: 'Transfer to agent or number',
   },
   {
     type: 'hangup',
     label: 'Hang Up',
     icon: PhoneOff,
-    color: 'bg-gradient-to-r from-red-400 to-red-600',
-    textColor: 'text-white',
-    borderColor: 'border-red-300',
-    glowClass: 'glow-red',
+    color: '#EF4444', // Red - End Call
+    bgClass: 'bg-red-500',
+    hoverClass: 'hover:bg-red-600',
     description: 'End the call gracefully',
   },
   {
     type: 'webhook',
     label: 'API Call',
     icon: Zap,
-    color: 'bg-gradient-to-r from-pink-400 to-pink-600',
-    textColor: 'text-white',
-    borderColor: 'border-pink-300',
-    glowClass: 'glow-pink',
+    color: '#EC4899', // Pink - API/Integration
+    bgClass: 'bg-pink-500',
+    hoverClass: 'hover:bg-pink-600',
     description: 'Make external API requests',
   },
   {
     type: 'collectInput',
     label: 'Collect Input',
-    icon: Users,
-    color: 'bg-gradient-to-r from-indigo-400 to-indigo-600',
-    textColor: 'text-white',
-    borderColor: 'border-indigo-300',
-    glowClass: 'glow-indigo',
+    icon: Keyboard,
+    color: '#6366F1', // Indigo - User Input
+    bgClass: 'bg-indigo-500',
+    hoverClass: 'hover:bg-indigo-600',
     description: 'Collect caller input (DTMF/Voice)',
   },
 ];
@@ -90,85 +92,69 @@ const NodePalette = () => {
   };
 
   return (
-    <div className="w-80 modern-card border-r-0 custom-scrollbar overflow-y-auto">
-      {/* Header */}
-      <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-        <h3 className="font-bold text-xl mb-2 text-gradient-rainbow">🎨 IVR Nodes</h3>
-        <p className="text-sm opacity-90">Drag nodes to build your flow</p>
+    <div className="w-20 bg-gray-50 border-r border-gray-200 flex flex-col">
+      {/* Compact Header */}
+      <div className="bg-white p-3 border-b border-gray-200 text-center">
+        <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+          Nodes
+        </div>
       </div>
       
-      {/* Node Grid */}
-      <div className="p-4 space-y-3">
-        {nodeTypes.map((node, index) => {
+      {/* Icon-Only Node Grid */}
+      <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+        {nodeTypes.map((node) => {
           const Icon = node.icon;
           return (
             <div
               key={node.type}
-              className={`node-palette-item modern-card rounded-xl p-4 cursor-move border-2 ${node.borderColor} hover:${node.glowClass} transition-all duration-300`}
+              className={`
+                group relative 
+                w-14 h-14 
+                ${node.bgClass} ${node.hoverClass}
+                rounded-lg 
+                cursor-move 
+                flex items-center justify-center 
+                transition-all duration-200 
+                shadow-sm hover:shadow-md
+                hover:scale-105
+              `}
               draggable
               onDragStart={(e) => onDragStart(e, node.type)}
-              style={{
-                animationDelay: `${index * 0.1}s`,
-                animation: 'slideInLeft 0.5s ease-out forwards'
-              }}
+              title={`${node.label}: ${node.description}`}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`p-3 rounded-xl ${node.color} ${node.textColor} shadow-lg`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-bold text-gray-800">{node.label}</div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">{node.type}</div>
-                </div>
-              </div>
-              <div className="text-sm text-gray-600 leading-relaxed">{node.description}</div>
+              <Icon className="w-6 h-6 text-white" />
               
-              {/* Progress bar decoration */}
-              <div className="mt-3 h-1 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${node.color} rounded-full transition-all duration-1000`}
-                  style={{
-                    width: '100%',
-                    animation: `loadingBar 2s ease-in-out ${index * 0.2}s infinite alternate`
-                  }}
-                ></div>
+              {/* Tooltip on hover */}
+              <div className="
+                absolute left-16 top-1/2 transform -translate-y-1/2 
+                bg-gray-900 text-white text-xs 
+                px-3 py-2 rounded-lg 
+                opacity-0 group-hover:opacity-100 
+                transition-opacity duration-200 
+                pointer-events-none
+                whitespace-nowrap
+                shadow-lg
+                z-50
+              ">
+                <div className="font-semibold">{node.label}</div>
+                <div className="text-gray-300">{node.description}</div>
+                {/* Tooltip arrow */}
+                <div className="
+                  absolute right-full top-1/2 transform -translate-y-1/2 
+                  border-4 border-transparent border-r-gray-900
+                "></div>
               </div>
             </div>
           );
         })}
       </div>
       
-      {/* Help Section */}
-      <div className="sticky bottom-0 m-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 modern-card">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          <div className="text-sm font-bold text-blue-800">Quick Tips</div>
-        </div>
-        <div className="text-xs text-blue-700 leading-relaxed">
-          • Drag any node onto the canvas<br/>
-          • Connect nodes with flow lines<br/>
-          • Click nodes to configure properties<br/>
-          • Use <strong>Ctrl+Z</strong> to undo actions
+      {/* Compact Help */}
+      <div className="p-2 bg-white border-t border-gray-200">
+        <div className="text-xs text-gray-500 text-center">
+          Drag to canvas
         </div>
       </div>
-      
-      <style jsx>{`
-        @keyframes slideInLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        
-        @keyframes loadingBar {
-          from { opacity: 0.3; }
-          to { opacity: 0.8; }
-        }
-      `}</style>
     </div>
   );
 };
